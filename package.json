@@ -1,0 +1,19 @@
+{
+  "name": "ne-adcimae-expo",
+  "version": "1.0.0",
+  "description": "东北亚数字文化创新博览会模型艺术展区网站",
+  "main": "index.html",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "expo",
+    "model",
+    "art",
+    "cyberpunk",
+    "industrial"
+  ],
+  "author": "NE_DIGITAL_CULTURAL_EXPO",
+  "license": "MIT"
+}

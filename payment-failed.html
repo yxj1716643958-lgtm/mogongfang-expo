@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>支付失败 - 东北亚数字文创博览会</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .error-shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body class="bg-[#131315] text-[#e5e1e4] font-body min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full text-center">
+        <!-- Error Icon -->
+        <div class="mb-8 error-shake">
+            <span class="material-symbols-outlined text-red-500" style="font-size: 120px;">
+                cancel
+            </span>
+        </div>
+
+        <!-- Error Message -->
+        <h1 class="text-4xl font-bold mb-4 text-red-400" style="font-family: 'Space Grotesk', sans-serif;">
+            支付失败
+        </h1>
+        <p class="text-[#bac9cc] mb-8">
+            支付过程中出现错误，请重试或联系客服
+        </p>
+
+        <!-- Error Info -->
+        <div class="bg-[#201f21] border border-red-500/20 rounded-lg p-6 mb-8">
+            <div class="text-left space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-[#bac9cc] text-sm">错误码</span>
+                    <span class="text-red-400 font-bold" id="errorCode">PAYMENT_FAILED</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-[#bac9cc] text-sm">订单号</span>
+                    <span class="text-sm" id="orderNo">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Info -->
+        <div class="bg-[#201f21] border border-[#00e5ff]/10 rounded-lg p-6 mb-8">
+            <h3 class="font-bold mb-3">可能的原因：</h3>
+            <ul class="text-left text-sm text-[#bac9cc] space-y-2">
+                <li>• 支付账户余额不足</li>
+                <li>• 支付密码输入错误次数过多</li>
+                <li>• 网络连接不稳定</li>
+                <li>• 支付超时</li>
+            </ul>
+        </div>
+
+        <!-- Actions -->
+        <div class="space-y-4">
+            <a href="tickets.html" class="block w-full bg-[#00e5ff] text-[#00363d] py-4 font-bold text-center hover:bg-[#00daf3] transition-colors">
+                重新支付
+            </a>
+            <a href="dashboard.html" class="block w-full border border-[#00e5ff] text-[#00e5ff] py-4 font-bold text-center hover:bg-[#00e5ff]/10 transition-colors">
+                返回首页
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <p class="mt-8 text-[#bac9cc]/50 text-sm">
+            如需帮助，请联系客服
+        </p>
+    </div>
+
+    <script>
+        // Get order info from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderNo = urlParams.get('orderNo');
+        const errorCode = urlParams.get('errorCode');
+
+        if (orderNo) {
+            document.getElementById('orderNo').textContent = orderNo;
+        }
+        if (errorCode) {
+            document.getElementById('errorCode').textContent = errorCode;
+        }
+    </script>
+</body>
+</html>

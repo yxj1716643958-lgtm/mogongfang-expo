@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NE_ADCI_MAE - 展品详情</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/detail.css">
+</head>
+<body class="bg-surface text-on-surface font-body">
+    <!-- Top Navigation Shell -->
+    <nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 py-4 bg-zinc-950/60 backdrop-blur-xl border-b border-cyan-500/10 shadow-[0_0_20px_rgba(0,229,255,0.05)]">
+        <div class="flex items-center gap-6">
+            <a href="dashboard.html" class="flex items-center justify-center w-10 h-10 border border-outline-variant hover:border-primary-container hover:scale-105 active:scale-95 transition-all duration-300">
+                <span class="material-symbols-outlined text-primary">arrow_back</span>
+            </a>
+            <span class="text-xl font-bold tracking-tighter text-cyan-400 uppercase font-label">NE_ADCI_MAE</span>
+        </div>
+        <div class="hidden md:flex gap-8 items-center">
+            <a class="nav-link text-xs font-medium uppercase tracking-widest font-label text-zinc-400 hover:text-cyan-200 transition-colors duration-300" href="dashboard.html#exhibits">展品浏览</a>
+            <a class="nav-link text-xs font-medium uppercase tracking-widest font-label text-cyan-400 border-b-2 border-cyan-400 pb-1" href="#">模型展厅</a>
+            <a class="nav-link text-xs font-medium uppercase tracking-widest font-label text-zinc-400 hover:text-cyan-200 transition-colors duration-300" href="dashboard.html#archive">历史档案</a>
+            <a class="nav-link text-xs font-medium uppercase tracking-widest font-label text-zinc-400 hover:text-cyan-200 transition-colors duration-300" href="dashboard.html#schedule">活动日程</a>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="material-symbols-outlined text-zinc-400 hover:text-primary transition-colors">share</button>
+            <span class="material-symbols-outlined text-primary text-2xl">account_circle</span>
+        </div>
+    </nav>
+
+    <main class="min-h-screen pt-18 pb-32 technical-grid bg-surface">
+        <!-- Hero Banner Section -->
+        <section class="relative h-[716px] w-full overflow-hidden" id="heroSection">
+            <div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent z-10"></div>
+            <img id="heroImage" alt="Flagship Exhibit" class="w-full h-full object-cover grayscale opacity-60 hover:grayscale-0 transition-all duration-700">
+            <div class="absolute bottom-0 left-0 w-full p-8 md:p-16 z-20">
+                <div class="flex flex-col gap-4 max-w-5xl">
+                    <div class="flex gap-2" id="heroTags">
+                        <!-- Tags will be loaded dynamically -->
+                    </div>
+                    <h1 id="heroTitle" class="text-5xl md:text-7xl font-bold tracking-tight font-headline text-on-surface uppercase leading-tight">
+                        <!-- Title will be loaded dynamically -->
+                    </h1>
+                    <p id="heroDescription" class="text-on-surface-variant max-w-2xl text-lg font-light leading-relaxed">
+                        <!-- Description will be loaded dynamically -->
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Grid -->
+        <div class="px-8 md:px-16 mt-[-40px] relative z-30 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Specs & Info -->
+            <div class="lg:col-span-8 space-y-12">
+                <!-- Technical Specs Bento -->
+                <div class="beveled-corner bg-surface-container-low/60 glass-panel border border-outline-variant/20 p-8 shadow-2xl">
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <p class="text-primary text-[10px] font-bold font-label tracking-widest mb-1">DATA_STREAM // 01</p>
+                            <h2 class="text-3xl font-bold font-headline">技术规格描述</h2>
+                        </div>
+                        <span class="material-symbols-outlined text-primary-container">precision_manufacturing</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="specsGrid">
+                        <!-- Specs will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Event Schedule -->
+                <div class="beveled-corner bg-surface-container-low/60 glass-panel border border-outline-variant/20 p-8">
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <p class="text-primary text-[10px] font-bold font-label tracking-widest mb-1">TIMELINE_SEQUENCE // 02</p>
+                            <h2 class="text-3xl font-bold font-headline">展览日程排期</h2>
+                        </div>
+                        <span class="material-symbols-outlined text-primary-container">calendar_today</span>
+                    </div>
+                    <div class="space-y-4" id="scheduleList">
+                        <!-- Schedule will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Gallery Section -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-3xl font-bold font-headline uppercase tracking-tight">视觉图库 / ARCHIVE_VISUALS</h2>
+                        <div class="h-[1px] flex-grow bg-gradient-to-r from-primary/30 to-transparent"></div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="galleryGrid">
+                        <!-- Gallery images will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Context & Metadata -->
+            <div class="lg:col-span-4 space-y-8">
+                <!-- Venue Location -->
+                <div class="bg-surface-container-highest/30 border border-primary/10 p-8 beveled-corner">
+                    <h3 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">location_on</span>
+                        场馆坐标
+                    </h3>
+                    <div class="aspect-square bg-zinc-900 mb-6 flex items-center justify-center border border-outline-variant overflow-hidden relative">
+                        <img id="mapImage" alt="Map view" class="w-full h-full object-cover opacity-40 grayscale">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-8 h-8 bg-primary rounded-full animate-pulse flex items-center justify-center">
+                                <div class="w-2 h-2 bg-on-primary rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-zinc-500 font-label text-[10px] tracking-widest uppercase">VENUE_LOCATION</p>
+                            <p id="venueLocation" class="text-on-surface font-medium">主展厅 • 3号展位</p>
+                        </div>
+                        <div>
+                            <p class="text-zinc-500 font-label text-[10px] tracking-widest uppercase">EXHIBITION_PERIOD</p>
+                            <p id="exhibitionPeriod" class="text-on-surface font-medium">2024.03.15 - 2024.06.30</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Creator Info -->
+                <div class="bg-surface-container-highest/30 border border-secondary/10 p-8 beveled-corner">
+                    <h3 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">person</span>
+                        创作者信息
+                    </h3>
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-secondary text-3xl">account_circle</span>
+                        </div>
+                        <div>
+                            <p id="creatorName" class="text-lg font-bold text-on-surface">NE_TECH_LABS</p>
+                            <p id="creatorType" class="text-sm text-on-surface-variant">模型研发实验室</p>
+                        </div>
+                    </div>
+                    <p id="creatorDescription" class="text-sm text-on-surface-variant leading-relaxed mb-6">
+                        NE_TECH_LABS 是东北地区领先的模型技术研发机构，专注于高精度工业模型与数字化展示技术的创新。
+                    </p>
+                    <button class="w-full py-3 bg-secondary-container/20 text-secondary border border-secondary/30 text-[10px] font-label tracking-widest uppercase hover:bg-secondary-container/30 transition-colors">
+                        VIEW_PROFILE
+                    </button>
+                </div>
+
+                <!-- Related Exhibits -->
+                <div class="bg-surface-container-highest/30 border border-tertiary/10 p-8 beveled-corner">
+                    <h3 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-tertiary">link</span>
+                        相关展品
+                    </h3>
+                    <div class="space-y-4" id="relatedExhibits">
+                        <!-- Related exhibits will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="space-y-4">
+                    <button class="action-btn w-full py-4 bg-primary-container text-on-primary-container font-headline font-bold text-lg tracking-widest hover:brightness-110 active:scale-[0.98] transition-all relative overflow-hidden group" id="favoriteBtn">
+                        <span class="relative z-10 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">favorite_border</span>
+                            添加到收藏
+                        </span>
+                    </button>
+                    <button class="action-btn w-full py-4 bg-surface-container-high text-on-surface border border-outline-variant font-headline font-bold text-lg tracking-widest hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2" id="shareBtn">
+                        <span class="material-symbols-outlined">share</span>
+                        分享展品
+                    </button>
+                    <button class="action-btn w-full py-4 bg-surface-container-high text-on-surface border border-outline-variant font-headline font-bold text-lg tracking-widest hover:border-tertiary hover:text-tertiary transition-all flex items-center justify-center gap-2" id="bookBtn">
+                        <span class="material-symbols-outlined">event_available</span>
+                        预约参观
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scanner Line -->
+    <div class="fixed top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary-container/20 to-transparent animate-scan pointer-events-none z-20"></div>
+
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "wechat-pay-h5-server",
+  "version": "1.0.0",
+  "description": "微信支付H5支付服务器",
+  "main": "payment-server.js",
+  "scripts": {
+    "start": "node payment-server.js",
+    "dev": "nodemon payment-server.js"
+  },
+  "keywords": [
+    "wechat",
+    "pay",
+    "h5",
+    "payment"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

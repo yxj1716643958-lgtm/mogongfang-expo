@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node server.js)",
+      "Bash(netstat -ano)",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/b86a9caa28e131728f4fcd4342fcfed4.png\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img1.png\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/1b2c8036f2bbc7472242dba5d03844dd.png\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img2.png\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/f2e7d83fa8a4368d0744fac57630f1f4.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img3.jpg\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/567df066df8419f801bc7c9c22b83d49.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img4.jpg\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/a2bc33beb8b595dce42a32d5ca87cf40.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img5.jpg\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/9ec54faf78d96c7fec9346e45b2b6d60.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img6.jpg\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/a441ef47883f6eefa46ab9c9c74c02bf.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img7.jpg\")",
+      "Bash(cp \"d:/微信/xwechat_files/wxid_fp8dnudyxkqm22_2c6b/temp/RWTemp/2026-03/d33543124fcf694e47e5e2e0d7ccfb92/6ff370fdb1ea22d0b86b8d6c96258523.jpg\" \"E:\\\\魔攻方 第二次尝试\\\\assets\\\\gallery\\\\img8.jpg\")",
+      "Read(//e/claude 手动按照/**)",
+      "Bash(unzip -l \"mecha-expo-dashboard.zip\")",
+      "Bash(jar tf:*)",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::OpenRead\\(''mecha-expo-dashboard.zip''\\).Entries | Select-Object FullName\")",
+      "Bash(curl -I http://localhost:8080/about.html)",
+      "Bash(start:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
+    ]
+  }
+}
