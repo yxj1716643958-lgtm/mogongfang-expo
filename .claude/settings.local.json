@@ -79,7 +79,14 @@
       "Bash(curl -X POST http://localhost:3002/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"mobile\\\\\":\\\\\"18730880262\\\\\",\\\\\"code\\\\\":\\\\\"565341\\\\\"}\")",
       "Bash(xargs -I {} taskkill //F //PID {} sleep 2 cd \"E:/魔攻方 第二次尝试\")",
       "Bash(node auth-server.js)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(GIT_CURL_VERBOSE=1 git push origin main)",
+      "Bash(npx vercel *)",
+      "Bash(node ticket-server.js)",
+      "Bash(node init-ticket-db.js)",
+      "Bash(node -c controllers/authController.js)"
     ]
   }
 }

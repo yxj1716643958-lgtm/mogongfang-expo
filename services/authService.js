@@ -415,11 +415,260 @@ function sanitizeUser(user) {
     };
 }
 
+/**
+ * 使用密码注册
+ * @param {string} mobile - 手机号
+ * @param {string} password - 密码
+ * @param {string} code - 验证码
+ * @param {Object} extraData - 额外数据
+ * @returns {Promise<Object>}
+ */
+async function registerWithPassword(mobile, password, code, extraData = {}) {
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. 验证验证码
+        const verifyResult = await verifyCode(mobile, code);
+        if (!verifyResult.valid) {
+            throw new Error(verifyResult.message);
+        }
+
+        // 2. 检查用户是否已存在
+        const [existingUsers] = await connection.query(
+            'SELECT id FROM users WHERE mobile = ?',
+            [mobile]
+        );
+
+        if (existingUsers.length > 0) {
+            throw new Error('该手机号已注册');
+        }
+
+        // 3. 密码加密
+        const crypto = require('crypto');
+        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+
+        // 4. 创建用户
+        const [userResult] = await connection.query(
+            `INSERT INTO users (mobile, password_hash, nickname, status)
+             VALUES (?, ?, ?, 'ACTIVE')`,
+            [mobile, passwordHash, `用户${mobile.slice(-4)}`]
+        );
+
+        // 5. 标记验证码已使用
+        await connection.query(
+            `UPDATE sms_codes SET is_used = 1, used_at = ?
+             WHERE mobile = ? AND code = ? AND is_used = 0`,
+            [new Date().toISOString(), mobile, code]
+        );
+
+        // 6. 记录登录日志
+        const user = { id: userResult.insertId, mobile };
+        await logLoginAttempt(connection, {
+            userId: user.id,
+            mobile,
+            success: true,
+            loginInfo: extraData.loginInfo || {}
+        });
+
+        await connection.commit();
+        connection.release();
+
+        return {
+            success: true,
+            exists: false,
+            user: {
+                id: user.id,
+                mobile: user.mobile,
+                nickname: `用户${mobile.slice(-4)}`,
+                status: 'ACTIVE'
+            }
+        };
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        throw error;
+    }
+}
+
+/**
+ * 使用密码登录
+ * @param {string} mobile - 手机号
+ * @param {string} password - 密码
+ * @param {Object} loginInfo - 登录信息
+ * @returns {Promise<Object>}
+ */
+async function loginWithPassword(mobile, password, loginInfo = {}) {
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const crypto = require('crypto');
+        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+
+        // 1. 查找用户
+        const [users] = await connection.query(
+            'SELECT * FROM users WHERE mobile = ?',
+            [mobile]
+        );
+
+        if (users.length === 0) {
+            await logLoginAttempt(connection, {
+                userId: null,
+                mobile,
+                success: false,
+                failReason: '用户不存在',
+                loginInfo
+            });
+            throw new Error('用户不存在');
+        }
+
+        const user = users[0];
+
+        // 2. 验证密码
+        if (user.password_hash !== passwordHash) {
+            await logLoginAttempt(connection, {
+                userId: user.id,
+                mobile,
+                success: false,
+                failReason: '密码错误',
+                loginInfo
+            });
+            throw new Error('密码错误');
+        }
+
+        // 3. 检查用户状态
+        if (user.status !== 'ACTIVE') {
+            throw new Error('账户已被禁用');
+        }
+
+        // 4. 更新最后登录时间
+        await connection.query(
+            `UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ?`,
+            [new Date().toISOString(), loginInfo.ip, user.id]
+        );
+
+        // 5. 记录登录日志
+        await logLoginAttempt(connection, {
+            userId: user.id,
+            mobile,
+            success: true,
+            loginInfo
+        });
+
+        await connection.commit();
+        connection.release();
+
+        return {
+            success: true,
+            user: {
+                id: user.id,
+                mobile: user.mobile,
+                nickname: user.nickname,
+                avatar_url: user.avatar_url,
+                status: user.status
+            }
+        };
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        throw error;
+    }
+}
+
+/**
+ * 发送重置密码验证码
+ * @param {string} mobile - 手机号
+ * @returns {Promise<Object>}
+ */
+async function sendResetCode(mobile) {
+    // 检查用户是否存在
+    const connection = await pool.getConnection();
+    try {
+        const [users] = await connection.query(
+            'SELECT id FROM users WHERE mobile = ?',
+            [mobile]
+        );
+
+        if (users.length === 0) {
+            // 为了安全，不暴露用户是否存在
+            connection.release();
+            return {
+                success: true,
+                message: '如果该手机号已注册，将发送验证码'
+            };
+        }
+        connection.release();
+
+        // 发送验证码
+        return await sendLoginCode(mobile, { scene: 'reset_password' });
+    } catch (error) {
+        connection.release();
+        throw error;
+    }
+}
+
+/**
+ * 重置密码
+ * @param {string} mobile - 手机号
+ * @param {string} code - 验证码
+ * @param {string} newPassword - 新密码
+ * @returns {Promise<Object>}
+ */
+async function resetPassword(mobile, code, newPassword) {
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. 验证验证码
+        const verifyResult = await verifyCode(mobile, code);
+        if (!verifyResult.valid) {
+            throw new Error(verifyResult.message);
+        }
+
+        // 2. 加密新密码
+        const crypto = require('crypto');
+        const passwordHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+
+        // 3. 更新密码
+        await connection.query(
+            `UPDATE users SET password_hash = ?, updated_at = ? WHERE mobile = ?`,
+            [passwordHash, new Date().toISOString(), mobile]
+        );
+
+        // 4. 标记验证码已使用
+        await connection.query(
+            `UPDATE sms_codes SET is_used = 1, used_at = ?
+             WHERE mobile = ? AND code = ? AND is_used = 0`,
+            [new Date().toISOString(), mobile, code]
+        );
+
+        await connection.commit();
+        connection.release();
+
+        return {
+            success: true,
+            message: '密码重置成功'
+        };
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        throw error;
+    }
+}
+
 module.exports = {
     sendLoginCode,
     verifyCode,
     findOrCreateUser,
     loginWithSms,
+    registerWithPassword,
+    loginWithPassword,
+    sendResetCode,
+    resetPassword,
     verifyToken,
     generateToken
 };
