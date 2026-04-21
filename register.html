@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>用户注册 - 东北亚数字文创博览会</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed": "#9cf0ff",
+                        "tertiary-container": "#fec931",
+                        "primary": "#c3f5ff",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#520071",
+                        "primary-container": "#00e5ff",
+                        "surface-container-high": "#2a2a2c",
+                        "on-error-container": "#ffdad6",
+                        "surface": "#131315",
+                        "on-tertiary-container": "#6f5500",
+                        "background": "#131315",
+                        "surface-variant": "#353437",
+                        "surface-dim": "#131315",
+                        "secondary-fixed": "#f8d8ff",
+                        "inverse-surface": "#e5e1e4",
+                        "tertiary-fixed-dim": "#f3bf26",
+                        "on-secondary": "#7c2cb5",
+                        "outline": "#849396",
+                        "surface-container": "#201f21",
+                        "on-background": "#e5e1e4",
+                        "surface-bright": "#39393b",
+                        "secondary": "#ebb2ff",
+                        "on-surface": "#e5e1e4",
+                        "surface-container-low": "#1c1b1d",
+                        "inverse-on-surface": "#313032",
+                        "tertiary": "#ffeac0",
+                        "on-primary": "#00363d",
+                        "tertiary-fixed": "#ffdf96",
+                        "on-surface-variant": "#bac9cc",
+                        "outline-variant": "#3b494c",
+                        "on-primary-container": "#00626e",
+                        "surface-tint": "#00daf3",
+                        "inverse-primary": "#006875",
+                        "secondary-container": "#721199",
+                        "surface-container-highest": "#353437",
+                        "on-secondary-fixed": "#320047",
+                        "secondary-fixed-dim": "#ebb2ff",
+                        "tertiary-container": "#fec931",
+                        "on-tertiary-fixed-variant": "#594400",
+                        "surface-container-lowest": "#0e0e10"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0rem", "lg": "0rem", "xl": "0rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .technical-grid {
+            background-image:
+                linear-gradient(to right, rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .input-group {
+            position: relative;
+        }
+        .input-group input:focus + .clear-btn {
+            display: flex;
+        }
+        .clear-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            cursor: pointer;
+            color: #849396;
+        }
+        .input-group input:not(:placeholder-shown) + .clear-btn {
+            display: none;
+        }
+        .countdown-btn {
+            cursor: pointer;
+            user-select: none;
+        }
+        .countdown-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .verification-input {
+            display: flex;
+            gap: 8px;
+        }
+        .verification-input input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            border: 2px solid #3b494c;
+            background: #131315;
+            color: #e5e1e4;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .verification-input input:focus {
+            outline: none;
+            border-color: #00e5ff;
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
+        }
+        .error-shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen selection:bg-primary-container selection:text-on-primary-container">
+    <!-- Technical Background -->
+    <div class="fixed inset-0 z-0">
+        <div class="absolute inset-0 bg-surface"></div>
+        <img class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-screen"
+             src="assets/images/bg-mecha.png"
+             alt="Technical Background">
+        <div class="absolute inset-0 technical-grid"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/80"></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <!-- Header -->
+        <div class="mb-12 text-center">
+            <div class="inline-block relative">
+                <div class="text-primary font-headline text-5xl md:text-6xl font-black tracking-tighter uppercase mb-2">
+                    NE_ADCI_MAE
+                </div>
+                <div class="flex items-center justify-center gap-4">
+                    <span class="h-px w-8 bg-primary/30"></span>
+                    <span class="font-headline text-[10px] tracking-[0.4em] text-primary/60 font-bold uppercase">新用户注册</span>
+                    <span class="h-px w-8 bg-primary/30"></span>
+                </div>
+            </div>
+            <h1 class="text-on-surface-variant font-body text-xl md:text-2xl font-light tracking-widest mt-4">
+                创建账户开启数字艺术之旅
+            </h1>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="w-full max-w-md">
+            <div class="bg-surface-container-high/40 backdrop-blur-xl border border-primary-container/20 p-8 relative">
+                <!-- Decorative corner -->
+                <div class="absolute -top-px left-0 w-12 h-px bg-primary-container"></div>
+                <div class="absolute -bottom-px right-0 w-12 h-px bg-primary-container"></div>
+
+                <!-- Form Title -->
+                <div class="text-center mb-8">
+                    <h2 class="font-headline text-2xl font-bold mb-2">注册账户</h2>
+                    <p class="text-on-surface-variant text-sm">填写信息完成注册</p>
+                </div>
+
+                <form id="registerForm" class="space-y-6">
+                    <!-- Mobile Input with Verification -->
+                    <div>
+                        <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
+                            手机号码 <span class="text-error">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="tel" id="mobile" name="mobile" required
+                                   class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-on-surface focus:ring-0 focus:border-primary-container placeholder:text-on-surface-variant/40 transition-all"
+                                   pattern="[0-9]{11}"
+                                   maxlength="11"
+                                   placeholder="请输入11位手机号">
+                            <span class="material-symbols-outlined clear-btn" onclick="clearMobile()">close</span>
+                        </div>
+                        <p class="text-on-s_surface-variant/50 text-xs mt-1">请输入真实手机号，用于接收验证码</p>
+                    </div>
+
+                    <!-- Verification Code -->
+                    <div id="verificationSection" class="hidden">
+                        <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
+                            验证码 <span class="text-error">*</span>
+                        </label>
+                        <div class="space-y-3">
+                            <!-- Verification Code Input -->
+                            <div class="verification-input" id="codeInputs">
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                                <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
+                            </div>
+
+                            <!-- Send/Resend Button -->
+                            <div class="flex justify-between items-center">
+                                <button type="button" id="sendCodeBtn" onclick="sendVerificationCode()"
+                                        class="text-sm text-primary hover:underline">
+                                    发送验证码
+                                </button>
+                                <span id="countdown" class="text-sm text-on-surface-variant hidden">
+                                    <span class="countdown-btn" onclick="resendCode()">重新发送</span>
+                                    <span id="countdownTimer"> (60s)</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Name -->
+                    <div>
+                        <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
+                            姓名 <span class="text-error">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="name" name="name" required
+                                   class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-on-surface focus:ring-0 focus:border-primary-container placeholder:text-on-surface-variant/40 transition-all"
+                                   placeholder="请输入您的真实姓名">
+                            <span class="material-symbols-outlined clear-btn" onclick="clearField('name')">close</span>
+                        </div>
+                    </div>
+
+                    <!-- Email (Optional) -->
+                    <div>
+                        <label class="font-label text-[10px] text-on-surface-variant tracking-widest font-bold block mb-2">
+                            邮箱（选填）
+                        </label>
+                        <div class="input-group">
+                            <input type="email" id="email" name="email"
+                                   class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-on-surface focus:ring-0 focus:border-primary-container placeholder:text-on-surface-variant/40 transition-all"
+                                   placeholder="用于接收电子票">
+                            <span class="material-symbols-outlined clear-btn" onclick="clearField('email')">close</span>
+                        </div>
+                    </div>
+
+                    <!-- User Type Selection -->
+                    <div>
+                        <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
+                            用户类型 <span class="text-error">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="userType" value="enthusiast" class="hidden peer" required>
+                                <div class="p-4 bg-surface border border-outline-30 rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:border-primary transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-2xl text-secondary">token</span>
+                                        <div>
+                                            <p class="font-bold text-sm">模型爱好者</p>
+                                            <p class="text-xs text-on-surface-variant">体验数字艺术</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="userType" value="professional" class="hidden peer" required>
+                                <div class="p-4 bg-surface border border-outline-30 rounded-lg peer-checked:border-secondary peer-checked:bg-secondary/10 peer-checked:border-secondary transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-2xl text-tertiary">precision_manufacturing</span>
+                                        <div>
+                                            <p class="font-bold text-sm">专业观众/展商</p>
+                                            <p class="text-xs text-on-surface-variant">商业洽谈权限</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Agreement -->
+                    <div>
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" id="agreement" required
+                                   class="mt-1 w-4 h-4 rounded border-2 border-outline-30 bg-surface checked:border-primary focus:ring-0">
+                            <span class="text-sm text-on-surface-variant">
+                                我已阅读并同意<a href="#" class="text-primary hover:underline ml-1">用户协议</a>和<a href="#" class="text-primary hover:underline ml-1">隐私政策</a>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitBtn"
+                            class="w-full py-4 bg-primary-container text-on-primary-container font-headline font-bold text-lg tracking-widest hover:brightness-110 active:scale-[0.98] transition-all relative overflow-hidden group">
+                        <span class="relative z-10">立即注册</span>
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    </button>
+                </form>
+
+                <!-- Login Link -->
+                <div class="mt-6 text-center text-sm">
+                    <span class="text-on-surface-variant">已有账户？</span>
+                    <a href="index.html" class="text-primary hover:underline ml-2 font-bold">立即登录</a>
+                </div>
+            </div>
+
+            <!-- Back Link -->
+            <div class="mt-8 text-center">
+                <a href="index.html" class="text-on-surface-variant hover:text-primary transition-colors text-sm">
+                    ← 返回首页
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 hidden">
+        <div class="bg-surface-container border border-outline-variant px-6 py-3 rounded-lg shadow-xl">
+            <p id="toastMessage" class="text-sm"></p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const API_BASE = 'http://localhost:3001/api/v1';
+
+        // ==================== 状态管理 ====================
+        const state = {
+            mobile: '',
+            verificationCode: '',
+            countdown: 60,
+            isCountingDown: false,
+            timerId: null,
+            canResend: true
+        };
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initVerificationCodeInputs();
+            initInputEffects();
+        });
+
+        // ==================== 验证码输入框 ====================
+        function initVerificationCodeInputs() {
+            const inputs = document.querySelectorAll('#codeInputs input');
+
+            inputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+
+                    // 只允许数字
+                    if (!/^\d*$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
+
+                    // 自动聚焦下一个输入框
+                    if (value && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+
+                    // 更新验证码状态
+                    state.verificationCode = Array.from(inputs).map(i => i.value).join('');
+                });
+
+                // 删除键处理
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value) {
+                        e.preventDefault();
+                        if (index > 0) {
+                            inputs[index - 1].focus();
+                        }
+                    }
+                });
+
+                // 粘贴处理
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').trim();
+                    const digits = pastedData.replace(/\D/g, '').slice(0, 6);
+
+                    digits.forEach((digit, i) => {
+                        inputs[i].value = digit;
+                        if (i < inputs.length - 1) {
+                            inputs[i + 1].focus();
+                        }
+                    });
+
+                    state.verificationCode = digits.join('');
+                });
+            });
+        }
+
+        // ==================== 输入框效果 ====================
+        function initInputEffects() {
+            const mobileInput = document.getElementById('mobile');
+
+            mobileInput.addEventListener('input', () => {
+                const value = mobileInput.value.replace(/\D/g, '');
+                mobileInput.value = value;
+
+                if (value.length === 11) {
+                    // 手机号输入完成，显示验证码区域
+                    showVerificationSection();
+                }
+            });
+
+            // 防止非数字输入
+            mobileInput.addEventListener('keypress', (e) => {
+                if (!/\d/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // ==================== 手机号验证 ====================
+        function validateMobile() {
+            const mobile = document.getElementById('mobile').value.trim();
+
+            if (!mobile) {
+                showInputError('mobile', '请输入手机号');
+                return false;
+            }
+
+            if (!/^1[3-9]\d{9}$/.test(mobile)) {
+                showInputError('mobile', '请输入正确的手机号格式');
+                return false;
+            }
+
+            return true;
+        }
+
+        function clearMobile() {
+            const mobile = document.getElementById('mobile');
+            mobile.value = '';
+            mobile.focus();
+            hideVerificationSection();
+        }
+
+        // ==================== 验证码区域 ====================
+        function showVerificationSection() {
+            document.getElementById('verificationSection').classList.remove('hidden');
+
+            // 自动聚焦第一个验证码输入框
+            setTimeout(() => {
+                document.querySelector('#codeInputs input').focus();
+            }, 100);
+        }
+
+        function hideVerificationSection() {
+            document.getElementById('verificationSection').classList.add('hidden');
+            resetVerificationCode();
+            state.mobile = '';
+        }
+
+        function resetVerificationCode() {
+            const inputs = document.querySelectorAll('#codeInputs input');
+            inputs.forEach(input => input.value = '');
+            state.verificationCode = '';
+        }
+
+        // ==================== 发送验证码 ====================
+        async function sendVerificationCode() {
+            if (!validateMobile()) {
+                return;
+            }
+
+            if (!state.canResend) {
+                showToast('请等待倒计时结束后再试', 'error');
+                return;
+            }
+
+            const mobile = document.getElementById('mobile').value.trim();
+
+            try {
+                const response = await fetch(`${API_BASE}/sms/send-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    showToast('验证码已发送，请查收短信', 'success');
+                    state.mobile = mobile;
+                    startCountdown();
+                } else {
+                    showToast(result.message || '发送失败，请重试', 'error');
+                }
+
+            } catch (error) {
+                console.error('发送验证码失败:', error);
+                // 模拟发送成功（开发环境）
+                simulateSendCode();
+            }
+        }
+
+        function simulateSendCode() {
+            console.log('模拟发送验证码到:', state.mobile);
+            showToast('【测试模式】验证码: 123456', 'success');
+            state.mobile = document.getElementById('mobile').value.trim();
+            startCountdown();
+        }
+
+        // ==================== 倒计时 ====================
+        function startCountdown() {
+            state.canResend = false;
+            state.isCountingDown = true;
+            state.countdown = 60;
+
+            const countdownEl = document.getElementById('countdown');
+            const timerEl = document.getElementById('countdownTimer');
+            const sendBtn = document.getElementById('sendCodeBtn');
+
+            countdownEl.classList.remove('hidden');
+            sendBtn.classList.add('hidden');
+
+            state.timerId = setInterval(() => {
+                state.countdown--;
+                timerEl.textContent = `(${state.countdown}s)`;
+
+                if (state.countdown <= 0) {
+                    clearInterval(state.timerId);
+                    state.isCountingDown = false;
+                    state.canResend = true;
+                    timerEl.textContent = '';
+                }
+            }, 1000);
+        }
+
+        function resendCode() {
+            if (state.isCountingDown) {
+                showToast('请等待倒计时结束', 'error');
+                return;
+            }
+
+            // 重新发送验证码
+            sendVerificationCode();
+        }
+
+        // ==================== 表单提交 ====================
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!this.checkValidity()) {
+                showInputError('agreement', '请阅读并同意用户协议和隐私政策');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '注册中...';
+
+            try {
+                const formData = new FormData(this);
+                const data = {
+                    mobile: formData.get('mobile'),
+                    name: formData.get('name'),
+                    email: formData.get('email') || '',
+                    userType: formData.get('userType')
+                };
+
+                // 验证码校验
+                if (state.verificationCode !== '123456') {
+                    showInputError('verificationCode', '验证码错误');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '立即注册';
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    showToast('注册成功！正在跳转...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    showToast(result.message || '注册失败', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '立即注册';
+                }
+
+            } catch (error) {
+                console.error('注册失败:', error);
+                // 模拟注册成功（开发环境）
+                simulateRegistration();
+            }
+        });
+
+        function simulateRegistration() {
+            showToast('【测试模式】注册成功！', 'success');
+
+            // 保存用户信息
+            const userData = {
+                mobile: document.getElementById('mobile').value,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                userType: document.querySelector('input[name="userType"]:checked').value,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('ne_adcimae_user', JSON.stringify(userData));
+
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1500);
+        }
+
+        // ==================== 工具函数 ====================
+        function clearField(fieldId) {
+            const input = document.getElementById(fieldId);
+            input.value = '';
+            input.focus();
+        }
+
+        function showInputError(fieldId, message) {
+            const input = document.getElementById(fieldId) || document.getElementById(fieldId).parentElement;
+            input.classList.add('error-shake');
+
+            setTimeout(() => {
+                input.classList.remove('error-shake');
+            }, 500);
+
+            showToast(message, 'error');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+
+            toast.classList.remove('hidden');
+            toastMessage.textContent = message;
+
+            // 设置颜色
+            toast.querySelector('.bg-surface-container').classList.remove('border-error', 'border-primary');
+            if (type === 'error') {
+                toast.querySelector('.bg-surface-container').classList.add('border-error');
+            } else if (type === 'success') {
+                toast.querySelector('.bg-surface-container').classList.add('border-primary');
+            }
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>我的门票 - 东北亚数字文创与模玩艺术博览会</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#131315",
+                        "surface-container": "#201f21",
+                        "surface-container-low": "#1c1b1d",
+                        "on-surface": "#e5e1e4",
+                        "on-surface-variant": "#bac9cc",
+                        "primary": "#c3f5ff",
+                        "primary-container": "#00e5ff",
+                        "on-primary-container": "#00363d",
+                        "tertiary": "#ffeac0",
+                        "tertiary-container": "#fec931",
+                        "on-tertiary-fixed": "#251a00",
+                        "outline": "#849396",
+                        "outline-variant": "#3b494c",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Space Grotesk"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .schematic-grid {
+            background-image: linear-gradient(#00e5ff05 1px, transparent 1px), linear-gradient(90deg, #00e5ff05 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .ticket-card {
+            background: linear-gradient(135deg, rgba(0,229,255,0.05) 0%, rgba(254,201,49,0.05) 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body">
+    <!-- Top Navigation Bar -->
+    <nav class="fixed top-0 w-full z-50 bg-[#131315]/80 backdrop-blur-xl border-b border-[#00e5ff]/10 flex justify-between items-center px-8 h-20">
+        <a href="dashboard.html" class="text-lg font-bold tracking-tighter text-[#c3f5ff] font-headline hover:text-primary transition-colors">
+            东北亚数字文创与模玩艺术博览会
+        </a>
+        <div class="flex items-center gap-6">
+            <a href="tickets.html" class="text-[#bac9cc] hover:text-[#00e5ff] transition-colors font-label text-sm tracking-widest">
+                购票
+            </a>
+            <a href="dashboard.html" class="bg-primary-container text-on-primary-container px-6 py-2 font-label font-bold text-sm tracking-tighter border-b-2 border-[#00daf3] hover:brightness-110 transition-all">
+                返回首页
+            </a>
+        </div>
+    </nav>
+
+    <main class="pt-32 pb-24 min-h-screen schematic-grid">
+        <div class="max-w-4xl mx-auto px-8">
+            <!-- Header -->
+            <header class="mb-12 text-center">
+                <span class="font-label text-xs tracking-[0.3em] text-primary mb-4 block">MY_TICKETS // V1.0</span>
+                <h1 class="font-headline text-4xl md:text-5xl font-bold tracking-tighter mb-4">
+                    我的<span class="text-primary-container">门票</span>
+                </h1>
+                <p class="text-on-surface-variant">请出示二维码入场</p>
+            </header>
+
+            <!-- Search Form -->
+            <div class="bg-surface-container border border-[#00e5ff]/20 rounded-lg p-6 mb-8">
+                <label class="block text-sm font-bold mb-3">查询门票</label>
+                <div class="flex gap-4">
+                    <input type="tel" id="phoneInput"
+                        class="flex-1 bg-[#131315] border border-[#3b494c] rounded px-4 py-3 focus:border-[#00e5ff] focus:outline-none"
+                        placeholder="请输入购票/申请手机号">
+                    <button onclick="queryTickets()"
+                        class="bg-primary-container text-on-primary-container px-8 py-3 font-bold rounded hover:bg-[#00daf3] transition-colors">
+                        查询
+                    </button>
+                </div>
+                <p class="text-on-surface-variant/50 text-xs mt-2">
+                    提示：请输入购票时填写的手机号查询
+                </p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-container border-t-transparent"></div>
+                <p class="text-on-surface-variant mt-4">查询中...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <span class="material-symbols-outlined text-6xl text-outline-variant">confirmation_number</span>
+                <p class="text-on-surface-variant mt-4">暂无门票信息</p>
+                <a href="tickets.html" class="inline-block mt-4 bg-primary-container text-on-primary-container px-8 py-3 font-bold rounded hover:bg-[#00daf3] transition-colors">
+                    前往购票
+                </a>
+            </div>
+
+            <!-- Tickets List -->
+            <div id="ticketsList" class="space-y-6">
+                <!-- 门票卡片将通过JS动态生成 -->
+            </div>
+
+            <!-- Application Status -->
+            <div id="applicationsSection" class="mt-12 hidden">
+                <h2 class="font-headline text-xl font-bold mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-tertiary">pending</span>
+                    申请状态
+                </h2>
+                <div id="applicationsList" class="space-y-4">
+                    <!-- 申请卡片将通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0e0e10] w-full py-12 border-t border-[#00e5ff]/5">
+        <div class="flex flex-col items-center gap-6 w-full max-w-7xl mx-auto">
+            <div class="text-[#c3f5ff] font-black font-headline tracking-tighter text-xl">
+                NORTHEAST ASIA EXPO
+            </div>
+            <div class="text-[#bac9cc]/30 font-label text-[10px] uppercase tracking-[0.1em]">
+                © 2024 NORTHEAST ASIA DIGITAL CULTURAL INNOVATION EXPO. ALL RIGHTS RESERVED.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ==================== 配置 ====================
+        const API_CONFIG = {
+            baseUrl: 'http://localhost:3001/api/v1',  // 更新为正确的API地址
+        // 支持加密token二维码
+            useEncryptedToken: true
+        };
+
+        // ==================== 状态样式 ====================
+        function getStatusClass(status) {
+            const classes = {
+                'ACTIVE': 'bg-primary-container/20 text-primary',
+                'USED': 'bg-outline-variant/20 text-on-surface-variant',
+                'CANCELLED': 'bg-red-500/20 text-red-400',
+                'EXPIRED': 'bg-tertiary-container/20 text-tertiary',
+                'PENDING': 'bg-tertiary-container/20 text-tertiary',
+                'APPROVED': 'bg-primary-container/20 text-primary',
+                'REJECTED': 'bg-red-500/20 text-red-400'
+            };
+            return classes[status] || 'bg-outline-variant/20 text-on-surface-variant';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'ACTIVE': '有效',
+                'USED': '已使用',
+                'CANCELLED': '已作废',
+                'EXPIRED': '已过期',
+                'PENDING': '待审核',
+                'APPROVED': '已通过',
+                'REJECTED': '已拒绝'
+            };
+            return texts[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function maskPhone(phone) {
+            if (!phone || phone.length < 11) return phone;
+            return phone.substring(0, 3) + '****' + phone.substring(7);
+        }
+
+        // ==================== 查询门票 ====================
+        async function queryTickets() {
+            const phone = document.getElementById('phoneInput').value.trim();
+            if (!phone) {
+                alert('请输入手机号');
+                return;
+            }
+
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                alert('请输入正确的手机号');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('ticketsList').innerHTML = '';
+            document.getElementById('applicationsSection').classList.add('hidden');
+
+            try {
+                // 查询票券
+                const ticketsResponse = await fetch(`${API_CONFIG.baseUrl}/tickets/my-tickets?phone=${encodeURIComponent(phone)}`);
+                const ticketsResult = await ticketsResponse.json();
+
+                // 查询申请
+                const applicationsResponse = await fetch(`${API_CONFIG.baseUrl}/invitations/my-applications?phone=${encodeURIComponent(phone)}`);
+                const applicationsResult = await applicationsResponse.json();
+
+                // 隐藏加载状态
+                document.getElementById('loadingState').classList.add('hidden');
+
+                // 处理票券数据
+                if (ticketsResult.code === 'SUCCESS') {
+                    renderTickets(ticketsResult.data.list || []);
+                }
+
+                // 处理申请数据
+                if (applicationsResult.code === 'SUCCESS') {
+                    renderApplications(applicationsResult.data.list || []);
+                }
+
+                // 如果都为空，显示空状态
+                const hasTickets = ticketsResult.code === 'SUCCESS' && ticketsResult.data.list && ticketsResult.data.list.length > 0;
+                const hasApplications = applicationsResult.code === 'SUCCESS' && applicationsResult.data.list && applicationsResult.data.list.length > 0;
+
+                if (!hasTickets && !hasApplications) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('查询失败:', error);
+                document.getElementById('loadingState').classList.add('hidden');
+                alert('查询失败，请稍后重试');
+            }
+        }
+
+        // ==================== 渲染门票列表 ====================
+        function renderTickets(tickets) {
+            const container = document.getElementById('ticketsList');
+
+            if (tickets.length === 0) {
+                return;
+            }
+
+            container.innerHTML = tickets.map(ticket => `
+                <div class="ticket-card bg-surface-container border border-[#00e5ff]/20 rounded-lg overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-headline text-xl font-bold">${ticket.ticketName}</h3>
+                                    <span class="px-3 py-1 rounded text-xs font-bold ${getStatusClass(ticket.ticketStatus)}">
+                                        ${getStatusText(ticket.ticketStatus)}
+                                    </span>
+                                </div>
+                                <p class="text-on-surface-variant text-sm">票号：${ticket.ticketNo}</p>
+                            </div>
+                            ${ticket.ticketCategory === 'PAID' ? `
+                            <div class="text-right">
+                                <p class="text-2xl font-bold text-primary">¥${(ticket.ticketPrice / 100).toFixed(2)}</p>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+                            <div>
+                                <span class="text-on-surface-variant">姓名：</span>
+                                <span>${ticket.userName}</span>
+                            </div>
+                            <div>
+                                <span class="text-on-surface-variant">手机：</span>
+                                <span>${maskPhone(ticket.userPhone)}</span>
+                            </div>
+                            <div>
+                                <span class="text-on-surface-variant">有效期：</span>
+                                <span>${formatDate(ticket.validStartTime)} - ${formatDate(ticket.validEndTime)}</span>
+                            </div>
+                            ${ticket.verifiedAt ? `
+                            <div>
+                                <span class="text-on-surface-variant">核销时间：</span>
+                                <span class="text-primary">${formatDate(ticket.verifiedAt)}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        ${ticket.ticketStatus === 'ACTIVE' ? `
+                        <div class="bg-white rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">qr_code</span>
+                                    <span class="text-sm font-bold">入场二维码</span>
+                                </div>
+                                <span class="text-on-surface-variant/70 text-xs">请出示二维码入场</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <canvas id="qrcode-${ticket.ticketId}" class="bg-white p-2 rounded"></canvas>
+                                <div class="text-right space-y-2">
+                                    <button onclick="saveQRCode('${ticket.ticketNo}')" class="block w-full text-primary text-sm hover:underline">
+                                        保存图片
+                                    </button>
+                                    <button onclick="shareTicket('${ticket.ticketNo}')" class="block w-full text-on-surface-variant text-sm hover:underline">
+                                        分享门票
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-4 bg-primary-container/5 rounded border border-primary/10">
+                            <p class="text-xs text-on-surface-variant">
+                                <span class="material-symbols-outlined text-sm align-middle">info</span>
+                                <span class="align-middle">请于展览期间出示此二维码入场，二维码仅供本人使用，请勿转发他人。</span>
+                            </p>
+                        </div>
+                        ` : ticket.ticketStatus === 'USED' ? `
+                        <div class="p-6 bg-outline-variant/5 rounded border border-outline-variant/20 text-center">
+                            <span class="material-symbols-outlined text-4xl text-on-surface-variant">check_circle</span>
+                            <p class="text-on-surface-variant mt-2">此门票已使用</p>
+                            <p class="text-on-surface-variant/70 text-sm mt-1">核销时间：${formatDate(ticket.verifiedAt)}</p>
+                        </div>
+                        ` : ticket.ticketStatus === 'EXPIRED' ? `
+                        <div class="p-6 bg-tertiary-container/5 rounded border border-tertiary/20 text-center">
+                            <span class="material-symbols-outlined text-4xl text-tertiary">event_busy</span>
+                            <p class="text-tertiary mt-2">此门票已过期</p>
+                        </div>
+                        ` : `
+                        <div class="p-6 bg-red-500/5 rounded border border-red-500/20 text-center">
+                            <span class="material-symbols-outlined text-4xl text-red-400">cancel</span>
+                            <p class="text-red-400 mt-2">此门票已${getStatusText(ticket.ticketStatus)}</p>
+                        </div>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+
+            // 生成二维码
+            tickets.forEach(ticket => {
+                if (ticket.ticketStatus === 'ACTIVE') {
+                    setTimeout(() => generateQRCode(ticket), 100);
+                }
+            });
+        }
+
+        // ==================== 渲染申请列表 ====================
+        function renderApplications(applications) {
+            const container = document.getElementById('applicationsList');
+            const section = document.getElementById('applicationsSection');
+
+            if (applications.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+
+            container.innerHTML = applications.map(app => `
+                <div class="bg-surface-container border border-[#fec931]/20 rounded-lg p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 class="font-headline text-lg font-bold">邀请函申请</h4>
+                            <p class="text-on-surface-variant text-sm">申请单号：${app.applicationNo}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded text-xs font-bold ${getStatusClass(app.auditStatus)}">
+                            ${getStatusText(app.auditStatus)}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                        <div>
+                            <span class="text-on-surface-variant">申请人：</span>
+                            <span>${app.applicantName}</span>
+                        </div>
+                        <div>
+                            <span class="text-on-surface-variant">手机：</span>
+                            <span>${maskPhone(app.applicantPhone)}</span>
+                        </div>
+                        <div>
+                            <span class="text-on-surface-variant">公司：</span>
+                            <span>${app.applicantCompany}</span>
+                        </div>
+                        <div>
+                            <span class="text-on-surface-variant">申请时间：</span>
+                            <span>${formatDate(app.createdAt)}</span>
+                        </div>
+                    </div>
+
+                    ${app.auditStatus === 'PENDING' ? `
+                    <div class="p-4 bg-tertiary-container/5 rounded border border-tertiary/20">
+                        <p class="text-sm">
+                            <span class="material-symbols-outlined text-sm align-middle text-tertiary">schedule</span>
+                            <span class="align-middle text-on-surface-variant">审核中，请耐心等待。我们将在1-3个工作日内完成审核。</span>
+                        </p>
+                    </div>
+                    ` : app.auditStatus === 'APPROVED' && app.orderId ? `
+                    <div class="p-4 bg-primary-container/5 rounded border border-primary/20">
+                        <p class="text-sm text-primary">
+                            <span class="material-symbols-outlined text-sm align-middle">check_circle</span>
+                            <span class="align-middle">审核通过！门票已发放，请在上方查看。</span>
+                        </p>
+                    </div>
+                    ` : app.auditStatus === 'REJECTED' ? `
+                    <div class="p-4 bg-red-500/5 rounded border border-red-500/20">
+                        <p class="text-sm text-red-400">
+                            <span class="material-symbols-outlined text-sm align-middle">cancel</span>
+                            <span class="align-middle">审核未通过${app.auditReason ? '：' + app.auditReason : ''}</span>
+                        </p>
+                    </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // ==================== 生成二维码 ====================
+        function generateQRCode(ticket) {
+            const canvas = document.getElementById(`qrcode-${ticket.ticketId}`);
+            if (!canvas) return;
+
+            QRCode.toCanvas(canvas, ticket.qrCodeToken || ticket.qrCodeShort || ticket.ticketNo, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, function(error) {
+                if (error) {
+                    console.error('生成二维码失败:', error);
+                    canvas.parentElement.innerHTML = '<p class="text-red-400">二维码生成失败</p>';
+                }
+            });
+        }
+
+        // ==================== 保存二维码 ====================
+        function saveQRCode(ticketNo) {
+            const canvas = document.querySelector(`canvas[id^="qrcode-"]`);
+            if (!canvas) {
+                alert('二维码未找到');
+                return;
+            }
+
+            try {
+                const link = document.createElement('a');
+                link.download = `门票-${ticketNo}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (error) {
+                console.error('保存失败:', error);
+                alert('保存失败，请截图保存');
+            }
+        }
+
+        // ==================== 分享门票 ====================
+        function shareTicket(ticketNo) {
+            if (navigator.share) {
+                navigator.share({
+                    title: '东北亚数字文创博览会门票',
+                    text: '我已成功购票，期待与您相见！',
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                // 复制链接
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('链接已复制到剪贴板');
+                }).catch(() => {
+                    alert('复制失败，请手动分享链接');
+                });
+            }
+        }
+
+        // ==================== 页面初始化 ====================
+        window.addEventListener('load', () => {
+            // 检查URL参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const phone = urlParams.get('phone');
+
+            if (phone) {
+                document.getElementById('phoneInput').value = phone;
+                queryTickets();
+            }
+
+            // 支持回车键搜索
+            document.getElementById('phoneInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    queryTickets();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
