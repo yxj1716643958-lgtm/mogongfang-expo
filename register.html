@@ -188,11 +188,11 @@
                                    placeholder="请输入11位手机号">
                             <span class="material-symbols-outlined clear-btn" onclick="clearMobile()">close</span>
                         </div>
-                        <p class="text-on-s_surface-variant/50 text-xs mt-1">请输入真实手机号，用于接收验证码</p>
+                        <p class="text-on-surface-variant/50 text-xs mt-1">请输入真实手机号，用于接收验证码</p>
                     </div>
 
                     <!-- Verification Code -->
-                    <div id="verificationSection" class="hidden">
+                    <div id="verificationSection">
                         <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
                             验证码 <span class="text-error">*</span>
                         </label>
@@ -221,19 +221,6 @@
                         </div>
                     </div>
 
-                    <!-- Name -->
-                    <div>
-                        <label class="font-label text-[10px] text-primary-container tracking-widest font-bold block mb-2">
-                            姓名 <span class="text-error">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="text" id="name" name="name" required
-                                   class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-on-surface focus:ring-0 focus:border-primary-container placeholder:text-on-surface-variant/40 transition-all"
-                                   placeholder="请输入您的真实姓名">
-                            <span class="material-symbols-outlined clear-btn" onclick="clearField('name')">close</span>
-                        </div>
-                    </div>
-
                     <!-- Email (Optional) -->
                     <div>
                         <label class="font-label text-[10px] text-on-surface-variant tracking-widest font-bold block mb-2">
@@ -254,7 +241,7 @@
                         </label>
                         <div class="grid grid-cols-2 gap-4">
                             <label class="cursor-pointer">
-                                <input type="radio" name="userType" value="enthusiast" class="hidden peer" required>
+                                <input type="radio" name="userType" value="enthusiast" class="hidden peer" required checked>
                                 <div class="p-4 bg-surface border border-outline-30 rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:border-primary transition-all">
                                     <div class="flex items-center gap-3">
                                         <span class="material-symbols-outlined text-2xl text-secondary">token</span>
@@ -324,12 +311,11 @@
 
     <script>
         // ==================== 配置 ====================
-        const API_BASE = 'http://localhost:3001/api/v1';
+        const API_BASE = 'http://localhost:3002/api/auth';
 
         // ==================== 状态管理 ====================
         const state = {
             mobile: '',
-            verificationCode: '',
             countdown: 60,
             isCountingDown: false,
             timerId: null,
@@ -360,9 +346,6 @@
                     if (value && index < inputs.length - 1) {
                         inputs[index + 1].focus();
                     }
-
-                    // 更新验证码状态
-                    state.verificationCode = Array.from(inputs).map(i => i.value).join('');
                 });
 
                 // 删除键处理
@@ -387,8 +370,6 @@
                             inputs[i + 1].focus();
                         }
                     });
-
-                    state.verificationCode = digits.join('');
                 });
             });
         }
@@ -400,11 +381,6 @@
             mobileInput.addEventListener('input', () => {
                 const value = mobileInput.value.replace(/\D/g, '');
                 mobileInput.value = value;
-
-                if (value.length === 11) {
-                    // 手机号输入完成，显示验证码区域
-                    showVerificationSection();
-                }
             });
 
             // 防止非数字输入
@@ -436,29 +412,6 @@
             const mobile = document.getElementById('mobile');
             mobile.value = '';
             mobile.focus();
-            hideVerificationSection();
-        }
-
-        // ==================== 验证码区域 ====================
-        function showVerificationSection() {
-            document.getElementById('verificationSection').classList.remove('hidden');
-
-            // 自动聚焦第一个验证码输入框
-            setTimeout(() => {
-                document.querySelector('#codeInputs input').focus();
-            }, 100);
-        }
-
-        function hideVerificationSection() {
-            document.getElementById('verificationSection').classList.add('hidden');
-            resetVerificationCode();
-            state.mobile = '';
-        }
-
-        function resetVerificationCode() {
-            const inputs = document.querySelectorAll('#codeInputs input');
-            inputs.forEach(input => input.value = '');
-            state.verificationCode = '';
         }
 
         // ==================== 发送验证码 ====================
@@ -473,9 +426,10 @@
             }
 
             const mobile = document.getElementById('mobile').value.trim();
+            state.mobile = mobile;
 
             try {
-                const response = await fetch(`${API_BASE}/sms/send-code`, {
+                const response = await fetch(`${API_BASE}/send-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ mobile })
@@ -483,9 +437,8 @@
 
                 const result = await response.json();
 
-                if (result.code === 'SUCCESS') {
+                if (result.success) {
                     showToast('验证码已发送，请查收短信', 'success');
-                    state.mobile = mobile;
                     startCountdown();
                 } else {
                     showToast(result.message || '发送失败，请重试', 'error');
@@ -493,16 +446,8 @@
 
             } catch (error) {
                 console.error('发送验证码失败:', error);
-                // 模拟发送成功（开发环境）
-                simulateSendCode();
+                showToast('网络错误，请重试', 'error');
             }
-        }
-
-        function simulateSendCode() {
-            console.log('模拟发送验证码到:', state.mobile);
-            showToast('【测试模式】验证码: 123456', 'success');
-            state.mobile = document.getElementById('mobile').value.trim();
-            startCountdown();
         }
 
         // ==================== 倒计时 ====================
@@ -545,8 +490,22 @@
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            if (!this.checkValidity()) {
-                showInputError('agreement', '请阅读并同意用户协议和隐私政策');
+            // 获取表单数据
+            const mobile = document.getElementById('mobile').value.trim();
+            const agreement = document.getElementById('agreement').checked;
+            const userType = document.querySelector('input[name="userType"]:checked');
+
+            // 基础验证
+            if (!mobile) {
+                showToast('请输入手机号', 'error');
+                return;
+            }
+            if (!userType) {
+                showToast('请选择用户类型', 'error');
+                return;
+            }
+            if (!agreement) {
+                showToast('请同意用户协议和隐私政策', 'error');
                 return;
             }
 
@@ -555,31 +514,37 @@
             submitBtn.textContent = '注册中...';
 
             try {
-                const formData = new FormData(this);
-                const data = {
-                    mobile: formData.get('mobile'),
-                    name: formData.get('name'),
-                    email: formData.get('email') || '',
-                    userType: formData.get('userType')
-                };
-
                 // 验证码校验
-                if (state.verificationCode !== '123456') {
-                    showInputError('verificationCode', '验证码错误');
+                const codeInputs = document.querySelectorAll('#codeInputs input');
+                const code = Array.from(codeInputs).map(input => input.value).join('');
+
+                if (!code || code.length !== 6) {
+                    showToast('请输入6位验证码', 'error');
                     submitBtn.disabled = false;
                     submitBtn.textContent = '立即注册';
                     return;
                 }
 
-                const response = await fetch(`${API_BASE}/auth/register`, {
+                const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({
+                        mobile: mobile,
+                        code: code
+                    })
                 });
 
                 const result = await response.json();
 
-                if (result.code === 'SUCCESS') {
+                if (result.success) {
+                    // 保存用户信息
+                    const userData = {
+                        mobile: mobile,
+                        userType: userType.value,
+                        loginTime: new Date().toISOString()
+                    };
+                    localStorage.setItem('ne_adcimae_user', JSON.stringify(userData));
+
                     showToast('注册成功！正在跳转...', 'success');
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
@@ -592,29 +557,11 @@
 
             } catch (error) {
                 console.error('注册失败:', error);
-                // 模拟注册成功（开发环境）
-                simulateRegistration();
+                showToast('网络错误，请重试', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '立即注册';
             }
         });
-
-        function simulateRegistration() {
-            showToast('【测试模式】注册成功！', 'success');
-
-            // 保存用户信息
-            const userData = {
-                mobile: document.getElementById('mobile').value,
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                userType: document.querySelector('input[name="userType"]:checked').value,
-                loginTime: new Date().toISOString()
-            };
-
-            localStorage.setItem('ne_adcimae_user', JSON.stringify(userData));
-
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1500);
-        }
 
         // ==================== 工具函数 ====================
         function clearField(fieldId) {
@@ -624,13 +571,13 @@
         }
 
         function showInputError(fieldId, message) {
-            const input = document.getElementById(fieldId) || document.getElementById(fieldId).parentElement;
-            input.classList.add('error-shake');
-
-            setTimeout(() => {
-                input.classList.remove('error-shake');
-            }, 500);
-
+            const input = document.getElementById(fieldId);
+            if (input) {
+                input.classList.add('error-shake');
+                setTimeout(() => {
+                    input.classList.remove('error-shake');
+                }, 500);
+            }
             showToast(message, 'error');
         }
 
