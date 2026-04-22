@@ -58,24 +58,24 @@ function initDatabase() {
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_no TEXT NOT NULL UNIQUE,
-            ticket_type_id INTEGER,
-            ticket_type_code TEXT NOT NULL,
-            ticket_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            unit_price REAL NOT NULL,
+            user_name TEXT NOT NULL,
+            user_phone TEXT NOT NULL,
+            user_email TEXT,
+            order_type TEXT,
             total_amount REAL NOT NULL,
-            buyer_name TEXT NOT NULL,
-            buyer_phone TEXT NOT NULL,
+            ticket_type_id INTEGER,
+            ticket_quantity INTEGER NOT NULL,
+            ticket_info TEXT,
             order_status TEXT DEFAULT 'PENDING',
             payment_status TEXT DEFAULT 'UNPAID',
             payment_method TEXT,
             payment_time TEXT,
             trade_no TEXT,
             paid_amount REAL,
-            remark TEXT,
+            expired_at TEXT,
+            client_ip TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            expired_at TEXT
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     `);
 

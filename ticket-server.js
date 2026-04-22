@@ -24,25 +24,17 @@ require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
-const mysql = require('mysql2/promise');
 const cors = require('cors');
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
 
 // ==================== 数据库配置 ====================
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'ne_expo_ticket',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-};
+// 使用SQLite适配器
+const { pool } = require('./sqlite-adapter');
+const { initDatabase } = require('./sqlite-db');
 
-// 创建数据库连接池
-const pool = mysql.createPool(dbConfig);
+// 初始化数据库
+initDatabase();
 
 // ==================== 票种配置 ====================
 const TICKET_TYPES = {
@@ -305,6 +297,22 @@ class HuifuHttpClient {
                 timeout: 30000  // 30秒超时
             });
 
+            // 检查响应状态
+            if (!response.ok) {
+                const text = await response.text();
+                console.error(`[汇付错误] HTTP ${response.status}: ${text}`);
+                throw new Error(`汇付API返回错误: ${response.status} ${response.statusText}`);
+            }
+
+            // 检查响应内容类型
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error(`[汇付错误] 非JSON响应: ${contentType}`);
+                console.error(`[汇付错误] 响应内容: ${text.substring(0, 500)}`);
+                throw new Error(`汇付API返回非JSON响应: ${contentType}`);
+            }
+
             const result = await response.json();
 
             console.log(`[汇付响应]`, JSON.stringify(result, null, 2));
@@ -498,7 +506,7 @@ app.post('/api/v1/orders', async (req, res) => {
                 }),
                 ticketType.category === 'PAID' ? 'PENDING' : 'PAID',
                 ticketType.category === 'PAID' ? 'UNPAID' : 'PAID',
-                new Date(Date.now() + 30 * 60 * 1000),  // 30分钟后过期
+                new Date(Date.now() + 30 * 60 * 1000).toISOString(),  // 30分钟后过期
                 req.ip || null
             ]
         );
@@ -1568,7 +1576,7 @@ app.listen(PORT, () => {
     console.log(`     • 核销记录: GET    http://localhost:${PORT}/api/v1/verify/records`);
     console.log('');
     console.log('   环境变量:');
-    console.log(`     • 数据库: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
+    console.log(`     • 数据库: SQLite (data/expo_tickets.db)`);
     console.log(`     • 票种: ${Object.keys(TICKET_TYPES).join(', ')}`);
     console.log('');
 
@@ -1583,8 +1591,7 @@ app.listen(PORT, () => {
     }
     console.log('');
 
-    console.log('   提示: 请确保MySQL数据库已启动并创建相应的表结构');
-    console.log('         参考SQL文件: SQL/schema.sql');
+    console.log('   提示: 使用SQLite数据库，数据文件位于 data/expo_tickets.db');
     console.log('');
 });
 

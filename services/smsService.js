@@ -32,6 +32,27 @@ function createSmsClient() {
  * @returns {Promise<Object>} 发送结果
  */
 async function sendVerificationCode(mobile, code) {
+    // 调试模式：直接在控制台打印验证码
+    if (process.env.SMS_DEBUG_MODE === 'true') {
+        console.log('');
+        console.log('╔════════════════════════════════════════════════════════════════╗');
+        console.log('║                    📱 短信验证码（调试模式）                      ║');
+        console.log('╚════════════════════════════════════════════════════════════════╝');
+        console.log(`   手机号: ${mobile}`);
+        console.log(`   验证码: ${code}`);
+        console.log(`   有效期: 5分钟`);
+        console.log(`   时间: ${new Date().toLocaleString('zh-CN')}`);
+        console.log('╚════════════════════════════════════════════════════════════════╝');
+        console.log('');
+
+        return {
+            success: true,
+            debugMode: true,
+            message: '验证码已生成（调试模式）'
+        };
+    }
+
+    // 生产模式：发送真实短信
     const client = createSmsClient();
 
     const request = new Dysmsapi.SendSmsRequest({

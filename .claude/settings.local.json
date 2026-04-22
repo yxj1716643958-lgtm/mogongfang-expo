@@ -86,7 +86,10 @@
       "Bash(npx vercel *)",
       "Bash(node ticket-server.js)",
       "Bash(node init-ticket-db.js)",
-      "Bash(node -c controllers/authController.js)"
+      "Bash(node -c controllers/authController.js)",
+      "Bash(findstr :3001)",
+      "Bash(sqlite3 data/expo_tickets.db \"DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS payment_records; DROP TABLE IF EXISTS tickets;\")",
+      "Bash(node reinit-db.js)"
     ]
   }
 }

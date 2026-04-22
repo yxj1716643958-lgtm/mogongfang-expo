@@ -112,7 +112,52 @@
 </div>
 <div class="flex items-center gap-4 font-['Space_Grotesk'] text-2xl font-bold text-[#c3f5ff] tracking-tighter">
 <a class="text-[#bac9cc] hover:text-[#00e5ff] transition-colors duration-300 ease-in-out">搜索</a>
-<a class="text-[#bac9cc] hover:text-[#00e5ff] transition-colors duration-300 ease-in-out">账户</a>
+<div class="relative" id="accountMenu">
+	<button onclick="toggleAccountMenu()" class="text-[#bac9cc] hover:text-[#00e5ff] transition-colors duration-300 ease-in-out flex items-center gap-2" id="accountBtn">
+		<span id="accountText">账户</span>
+		<span class="material-symbols-outlined text-xl">expand_more</span>
+	</button>
+	<div id="accountDropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-surface-container-high border border-primary/20 shadow-xl z-50">
+		<div id="loggedOutMenu" class="py-2">
+			<a href="login.html" class="block px-4 py-3 text-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+				<span class="flex items-center gap-2">
+					<span class="material-symbols-outlined text-lg">login</span>
+					登录
+				</span>
+			</a>
+			<a href="register.html" class="block px-4 py-3 text-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+				<span class="flex items-center gap-2">
+					<span class="material-symbols-outlined text-lg">person_add</span>
+					注册
+				</span>
+			</a>
+		</div>
+		<div id="loggedInMenu" class="py-2 hidden">
+			<div class="px-4 py-3 border-b border-outline-variant/20">
+				<p class="text-xs text-on-surface-variant/60 uppercase tracking-wider">欢迎回来</p>
+				<p class="text-sm font-bold text-primary mt-1" id="userName"></p>
+			</div>
+			<a href="dashboard.html" class="block px-4 py-3 text-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+				<span class="flex items-center gap-2">
+					<span class="material-symbols-outlined text-lg">dashboard</span>
+					控制台
+				</span>
+			</a>
+			<a href="my-tickets.html" class="block px-4 py-3 text-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+				<span class="flex items-center gap-2">
+					<span class="material-symbols-outlined text-lg">confirmation_number</span>
+					我的门票
+				</span>
+			</a>
+			<button onclick="logout()" class="w-full text-left px-4 py-3 text-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors">
+				<span class="flex items-center gap-2">
+					<span class="material-symbols-outlined text-lg">logout</span>
+					退出登录
+				</span>
+			</button>
+		</div>
+	</div>
+</div>
 <a class="text-[#bac9cc] hover:text-[#00e5ff] transition-colors duration-300 ease-in-out">语言</a>
 </div>
 </nav>
@@ -254,5 +299,48 @@
 
     updateCountdown();
     setInterval(updateCountdown, 1000);
+
+    // Account menu functionality
+    function checkLoginStatus() {
+        const user = localStorage.getItem('user');
+        const loggedOutMenu = document.getElementById('loggedOutMenu');
+        const loggedInMenu = document.getElementById('loggedInMenu');
+        const userName = document.getElementById('userName');
+
+        if (user) {
+            const userData = JSON.parse(user);
+            loggedOutMenu.classList.add('hidden');
+            loggedInMenu.classList.remove('hidden');
+            userName.textContent = userData.mobile || userData.username || '用户';
+        } else {
+            loggedOutMenu.classList.remove('hidden');
+            loggedInMenu.classList.add('hidden');
+        }
+    }
+
+    function toggleAccountMenu() {
+        const dropdown = document.getElementById('accountDropdown');
+        dropdown.classList.toggle('hidden');
+    }
+
+    function logout() {
+        if (confirm('确定要退出登录吗？')) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const accountMenu = document.getElementById('accountMenu');
+        const dropdown = document.getElementById('accountDropdown');
+        if (!accountMenu.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Check login status on page load
+    checkLoginStatus();
 </script>
 </body></html>
