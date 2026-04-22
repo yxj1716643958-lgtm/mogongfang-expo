@@ -620,6 +620,80 @@ app.post('/api/v1/payments/huifu/create', async (req, res) => {
 
         const { orderNo, paymentMethod = 'HUIFU_H5', returnUrl } = req.body;
 
+        // ============ 支付调试模式 ============
+        const paymentDebugMode = process.env.PAYMENT_DEBUG_MODE === 'true';
+
+        if (paymentDebugMode) {
+            console.log('[支付调试] 调试模式已开启，跳过真实支付');
+
+            // 查询订单
+            const [orders] = await connection.query(
+                'SELECT * FROM orders WHERE order_no = ? FOR UPDATE',
+                [orderNo]
+            );
+
+            if (orders.length === 0) {
+                throw new Error('订单不存在');
+            }
+
+            const order = orders[0];
+
+            if (order.payment_status === 'PAID') {
+                throw new Error('订单已支付');
+            }
+
+            // 解析票种信息
+            const ticketInfo = JSON.parse(order.ticket_info);
+
+            // 直接模拟支付成功，更新订单状态
+            await connection.query(
+                `UPDATE orders SET
+                    order_status = 'PAID',
+                    payment_status = 'PAID',
+                    paid_amount = total_amount,
+                    transaction_id = 'DEBUG_' + Date.now(),
+                    paid_at = NOW()
+                WHERE id = ?`,
+                [order.id]
+            );
+
+            // 出票
+            const tickets = await issueTickets(connection, {
+                orderId: order.id,
+                orderNo: order.order_no,
+                ticketTypeId: order.ticket_type_id,
+                ticketType: {
+                    code: ticketInfo.ticketCode,
+                    name: ticketInfo.ticketName,
+                    price: ticketInfo.price,
+                    category: order.order_type
+                },
+                userInfo: {
+                    name: order.user_name,
+                    phone: order.user_phone,
+                    userId: order.user_id
+                },
+                quantity: order.ticket_quantity
+            });
+
+            await connection.commit();
+
+            console.log(`[支付调试] 订单支付成功并已出票: ${orderNo}, 票券数量: ${tickets.length}`);
+
+            // 返回模拟支付结果
+            return res.json(successResponse({
+                paymentId: 'DEBUG_' + Date.now(),
+                orderNo: orderNo,
+                debugMode: true,
+                message: '调试模式：已跳过真实支付，票券已生成',
+                tickets: tickets.map(t => ({
+                    ticketNo: t.ticketNo,
+                    qrCodeToken: t.qrCodeToken
+                }))
+            }, '支付订单创建成功（调试模式）'));
+        }
+
+        // ============ 正常支付流程 ============
         // 验证汇付配置
         if (!validateHuifuConfig()) {
             throw new Error('汇付天下配置不完整');

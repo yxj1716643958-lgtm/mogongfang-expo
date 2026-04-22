@@ -598,8 +598,17 @@
                     throw new Error(paymentResult.message || '创建支付失败');
                 }
 
-                // 3. 跳转支付
-                window.location.href = paymentResult.data.paymentUrl;
+                // 3. 处理支付结果
+                if (paymentResult.data.debugMode) {
+                    // 调试模式：直接显示成功
+                    alert(`调试模式：购买成功！\n\n订单号：${orderResult.data.orderNo}\n票券已生成，您可以在"我的门票"页面查看。`);
+                    closeUserInfoModal();
+                    // 可选：跳转到我的门票页面
+                    // window.location.href = 'my-tickets.html';
+                } else {
+                    // 正常模式：跳转支付
+                    window.location.href = paymentResult.data.paymentUrl;
+                }
 
             } catch (error) {
                 console.error('购票失败:', error);

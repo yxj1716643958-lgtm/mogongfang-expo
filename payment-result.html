@@ -173,7 +173,7 @@
 
     <script>
         const API_CONFIG = {
-            baseUrl: '/api/v1',  // 开发环境可改为 'http://localhost:3000/api/v1'
+            baseUrl: 'https://mogongfang-expo-api.onrender.com/api/v1',  // 后端API地址
         };
 
         // 获取URL参数
@@ -232,9 +232,10 @@
 
             document.getElementById('successOrderNo').textContent = order?.orderNo || orderNo || '--';
 
+            // 金额已经是元，不需要除以100
             if (order?.totalAmount || order?.paidAmount) {
-                const amount = (order.totalAmount || order.paidAmount) / 100;
-                document.getElementById('successAmount').textContent = `¥${amount.toFixed(2)}`;
+                const amount = order.totalAmount || order.paidAmount;
+                document.getElementById('successAmount').textContent = `¥${parseFloat(amount).toFixed(2)}`;
             }
         }
 

@@ -90,7 +90,10 @@
       "Bash(findstr :3001)",
       "Bash(sqlite3 data/expo_tickets.db \"DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS payment_records; DROP TABLE IF EXISTS tickets;\")",
       "Bash(node reinit-db.js)",
-      "Bash(ping *)"
+      "Bash(ping *)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)"
     ]
   }
 }
