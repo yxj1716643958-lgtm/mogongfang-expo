@@ -1,0 +1,15 @@
+# Render部署配置
+
+services:
+  - type: web
+    name: mogongfang-expo-api
+    env: node
+    buildCommand: npm install
+    startCommand: node ticket-server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+    region: oregon
+    plan: free
