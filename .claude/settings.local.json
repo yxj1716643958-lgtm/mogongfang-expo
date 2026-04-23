@@ -93,7 +93,12 @@
       "Bash(ping *)",
       "Bash(git branch *)",
       "Bash(git checkout *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(sshpass *)",
+      "Bash(node test-signing.js)",
+      "Bash(node test-huifu-api.js)",
+      "Bash(node test-huifu-urls.js)",
+      "Bash(node test-huifu-sandbox.js)"
     ]
   }
 }

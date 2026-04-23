@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>管理后台 - 东北亚数字文创与模玩艺术博览会</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#131315",
+                        "surface": "#1a1a1c",
+                        "surface-container": "#201f21",
+                        "surface-variant": "#353437",
+                        "on-surface": "#e5e1e4",
+                        "on-surface-variant": "#bac9cc",
+                        "primary": "#c3f5ff",
+                        "primary-container": "#00e5ff",
+                        "on-primary-container": "#00363d",
+                        "secondary": "#ebb2ff",
+                        "tertiary": "#ffeac0",
+                        "tertiary-container": "#fec931",
+                        "error": "#ffb4ab",
+                        "success": "#a3e6a3",
+                        "outline": "#3b494c",
+                        "outline-variant": "#3b494c",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "Noto Sans SC", "sans-serif"],
+                        "body": ["Noto Sans SC", "sans-serif"],
+                        "label": ["Space Grotesk", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(32, 31, 33, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 229, 255, 0.1);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(32, 31, 33, 0.9) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background: rgba(0, 229, 255, 0.15);
+            border-left: 3px solid #00e5ff;
+        }
+        .table-row:hover {
+            background: rgba(0, 229, 255, 0.05);
+        }
+        .status-paid { color: #a3e6a3; }
+        .status-pending { color: #ffeac0; }
+        .status-cancelled { color: #ffb4ab; }
+        .status-used { color: #ebb2ff; }
+        .status-unused { color: #c3f5ff; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-surface-container border-r border-outline-variant/20 flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-outline-variant/20">
+                <h1 class="font-headline text-xl font-bold text-primary tracking-tight">管理后台</h1>
+                <p class="text-xs text-on-surface-variant mt-1">票务管理系统 v1.0</p>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-4">
+                <div class="space-y-1">
+                    <button onclick="showSection('dashboard')" class="sidebar-item active w-full flex items-center gap-3 px-6 py-3 text-left text-on-surface hover:text-primary" data-section="dashboard">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        <span class="font-label text-sm">仪表盘</span>
+                    </button>
+                    <button onclick="showSection('orders')" class="sidebar-item w-full flex items-center gap-3 px-6 py-3 text-left text-on-surface hover:text-primary" data-section="orders">
+                        <span class="material-symbols-outlined">shopping_cart</span>
+                        <span class="font-label text-sm">订单管理</span>
+                    </button>
+                    <button onclick="showSection('tickets')" class="sidebar-item w-full flex items-center gap-3 px-6 py-3 text-left text-on-surface hover:text-primary" data-section="tickets">
+                        <span class="material-symbols-outlined">confirmation_number</span>
+                        <span class="font-label text-sm">票券管理</span>
+                    </button>
+                    <button onclick="showSection('exhibitors')" class="sidebar-item w-full flex items-center gap-3 px-6 py-3 text-left text-on-surface hover:text-primary" data-section="exhibitors">
+                        <span class="material-symbols-outlined">store</span>
+                        <span class="font-label text-sm">展商管理</span>
+                    </button>
+                    <button onclick="showSection('checkin')" class="sidebar-item w-full flex items-center gap-3 px-6 py-3 text-left text-on-surface hover:text-primary" data-section="checkin">
+                        <span class="material-symbols-outlined">qr_code_scanner</span>
+                        <span class="font-label text-sm">核销记录</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- User Info -->
+            <div class="p-4 border-t border-outline-variant/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">
+                        <span class="material-symbols-outlined text-on-primary-container">person</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">管理员</p>
+                        <p class="text-xs text-on-surface-variant">admin@expo.com</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Top Bar -->
+            <header class="bg-surface-container/80 backdrop-blur-sm border-b border-outline-variant/20 px-8 py-4 sticky top-0 z-10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-on-surface" id="pageTitle">仪表盘</h2>
+                        <p class="text-sm text-on-surface-variant" id="currentDate"></p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="refreshData()" class="p-2 hover:bg-surface-variant rounded-lg transition-colors">
+                            <span class="material-symbols-outlined">refresh</span>
+                        </button>
+                        <a href="dashboard.html" class="px-4 py-2 bg-surface-variant hover:bg-surface-container rounded-lg text-sm transition-colors">
+                            返回前台
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="p-8">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="material-symbols-outlined text-primary text-3xl">people</span>
+                            <span class="text-xs text-on-surface-variant">今日</span>
+                        </div>
+                        <p class="text-3xl font-bold text-on-surface" id="todayVisitors">0</p>
+                        <p class="text-sm text-on-surface-variant mt-1">今日访客</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="material-symbols-outlined text-tertiary-container text-3xl">confirmation_number</span>
+                            <span class="text-xs text-on-surface-variant">累计</span>
+                        </div>
+                        <p class="text-3xl font-bold text-on-surface" id="totalTickets">0</p>
+                        <p class="text-sm text-on-surface-variant mt-1">票务销售</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="material-symbols-outlined text-secondary text-3xl">payments</span>
+                            <span class="text-xs text-on-surface-variant">累计</span>
+                        </div>
+                        <p class="text-3xl font-bold text-on-surface" id="totalRevenue">¥0</p>
+                        <p class="text-sm text-on-surface-variant mt-1">收入金额</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="material-symbols-outlined text-success text-3xl">verified</span>
+                            <span class="text-xs text-on-surface-variant">累计</span>
+                        </div>
+                        <p class="text-3xl font-bold text-on-surface" id="totalCheckins">0</p>
+                        <p class="text-sm text-on-surface-variant mt-1">核销数量</p>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="glass-panel rounded-xl p-6">
+                    <h3 class="text-lg font-bold mb-4">最近订单</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-outline-variant/20">
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">订单号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票种</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">购票人</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">手机号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">金额</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">状态</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentOrdersTable">
+                                <tr>
+                                    <td colspan="7" class="text-center py-8 text-on-surface-variant">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="ordersSection" class="p-8 hidden">
+                <div class="glass-panel rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold">订单列表</h3>
+                        <div class="flex gap-4">
+                            <select id="orderStatusFilter" class="bg-surface-variant border border-outline-variant rounded-lg px-4 py-2 text-sm">
+                                <option value="">全部状态</option>
+                                <option value="PENDING">待支付</option>
+                                <option value="PAID">已支付</option>
+                                <option value="CANCELLED">已取消</option>
+                            </select>
+                            <input type="text" id="orderSearchInput" placeholder="搜索订单号/手机号" class="bg-surface-variant border border-outline-variant rounded-lg px-4 py-2 text-sm">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-outline-variant/20">
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">订单号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票种</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">购票人</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">手机号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">数量</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">金额</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">状态</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">创建时间</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTable">
+                                <tr>
+                                    <td colspan="9" class="text-center py-8 text-on-surface-variant">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center justify-between mt-6">
+                        <p class="text-sm text-on-surface-variant" id="ordersCount">共 0 条记录</p>
+                        <div class="flex gap-2" id="ordersPagination"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tickets Section -->
+            <section id="ticketsSection" class="p-8 hidden">
+                <div class="glass-panel rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold">票券列表</h3>
+                        <div class="flex gap-4">
+                            <select id="ticketStatusFilter" class="bg-surface-variant border border-outline-variant rounded-lg px-4 py-2 text-sm">
+                                <option value="">全部状态</option>
+                                <option value="UNUSED">未使用</option>
+                                <option value="USED">已使用</option>
+                                <option value="EXPIRED">已过期</option>
+                            </select>
+                            <input type="text" id="ticketSearchInput" placeholder="搜索票号/手机号" class="bg-surface-variant border border-outline-variant rounded-lg px-4 py-2 text-sm">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-outline-variant/20">
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票种</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">持票人</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">手机号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">状态</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">核销时间</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketsTable">
+                                <tr>
+                                    <td colspan="7" class="text-center py-8 text-on-surface-variant">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Exhibitors Section -->
+            <section id="exhibitorsSection" class="p-8 hidden">
+                <div class="glass-panel rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold">展商列表</h3>
+                        <button onclick="showAddExhibitorModal()" class="px-4 py-2 bg-primary-container text-on-primary-container rounded-lg text-sm font-medium hover:brightness-110 transition-colors">
+                            添加展商
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-outline-variant/20">
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">ID</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">展商名称</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">展位号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">类别</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">国家/地区</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exhibitorsTable">
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-on-surface-variant">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Check-in Section -->
+            <section id="checkinSection" class="p-8 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Scanner -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-6">扫码核销</h3>
+                        <div class="space-y-4">
+                            <input type="text" id="checkinInput" placeholder="请输入或扫描票号/二维码" class="w-full bg-surface-variant border border-outline-variant rounded-lg px-4 py-3 text-sm" autofocus>
+                            <button onclick="processCheckin()" class="w-full bg-primary-container text-on-primary-container py-3 rounded-lg font-medium hover:brightness-110 transition-colors">
+                                确认核销
+                            </button>
+                        </div>
+                        <div id="checkinResult" class="mt-6 hidden">
+                            <!-- Check-in result will be shown here -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Check-ins -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-6">最近核销</h3>
+                        <div id="recentCheckins" class="space-y-3">
+                            <p class="text-on-surface-variant text-center py-8">暂无核销记录</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Check-in Records Table -->
+                <div class="glass-panel rounded-xl p-6 mt-8">
+                    <h3 class="text-lg font-bold mb-6">核销记录</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-outline-variant/20">
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票号</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">持票人</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">票种</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">核销时间</th>
+                                    <th class="text-left py-3 px-4 text-sm font-label text-on-surface-variant">核销员</th>
+                                </tr>
+                            </thead>
+                            <tbody id="checkinRecordsTable">
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-on-surface-variant">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderDetailModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-surface-container rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-outline-variant/20">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold">订单详情</h3>
+                    <button onclick="closeModal('orderDetailModal')" class="p-2 hover:bg-surface-variant rounded-lg">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="orderDetailContent">
+                <!-- Order details will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_CONFIG = {
+            baseUrl: window.location.hostname === 'localhost'
+                ? 'http://localhost:3001/api/v1'
+                : 'http://101.200.126.62:3001/api/v1'  // 阿里云ECS生产环境
+        };
+
+        // Current page state
+        let currentPage = 1;
+        let currentSection = 'dashboard';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCurrentDate();
+            loadDashboardData();
+
+            // Set up enter key for check-in input
+            document.getElementById('checkinInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    processCheckin();
+                }
+            });
+        });
+
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+        }
+
+        function showSection(section) {
+            currentSection = section;
+
+            // Hide all sections
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+
+            // Show selected section
+            document.getElementById(section + 'Section').classList.remove('hidden');
+
+            // Update sidebar
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === section) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update title
+            const titles = {
+                dashboard: '仪表盘',
+                orders: '订单管理',
+                tickets: '票券管理',
+                exhibitors: '展商管理',
+                checkin: '核销记录'
+            };
+            document.getElementById('pageTitle').textContent = titles[section];
+
+            // Load data
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'tickets':
+                    loadTickets();
+                    break;
+                case 'exhibitors':
+                    loadExhibitors();
+                    break;
+                case 'checkin':
+                    loadCheckinRecords();
+                    break;
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load statistics
+                const statsResponse = await fetch(`${API_CONFIG.baseUrl}/admin/stats`);
+                const statsResult = await statsResponse.json();
+
+                if (statsResult.code === 'SUCCESS') {
+                    document.getElementById('todayVisitors').textContent = statsResult.data.todayVisitors || 0;
+                    document.getElementById('totalTickets').textContent = statsResult.data.totalTickets || 0;
+                    document.getElementById('totalRevenue').textContent = `¥${(statsResult.data.totalRevenue || 0).toFixed(2)}`;
+                    document.getElementById('totalCheckins').textContent = statsResult.data.totalCheckins || 0;
+                }
+
+                // Load recent orders
+                const ordersResponse = await fetch(`${API_CONFIG.baseUrl}/admin/orders?limit=5`);
+                const ordersResult = await ordersResponse.json();
+
+                if (ordersResult.code === 'SUCCESS') {
+                    renderRecentOrders(ordersResult.data.orders || []);
+                }
+            } catch (error) {
+                console.error('加载仪表盘数据失败:', error);
+            }
+        }
+
+        function renderRecentOrders(orders) {
+            const tbody = document.getElementById('recentOrdersTable');
+
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-on-surface-variant">暂无订单</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = orders.map(order => `
+                <tr class="table-row border-b border-outline-variant/10">
+                    <td class="py-3 px-4 text-sm font-mono">${order.orderNo}</td>
+                    <td class="py-3 px-4 text-sm">${order.ticketName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${order.userName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${maskPhone(order.userPhone)}</td>
+                    <td class="py-3 px-4 text-sm">¥${(order.totalAmount / 100).toFixed(2)}</td>
+                    <td class="py-3 px-4 text-sm status-${order.paymentStatus.toLowerCase()}">${getStatusText(order.paymentStatus)}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <button onclick="viewOrderDetail('${order.orderNo}')" class="text-primary hover:underline">查看</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadOrders(page = 1) {
+            currentPage = page;
+            const statusFilter = document.getElementById('orderStatusFilter').value;
+            const searchInput = document.getElementById('orderSearchInput').value;
+
+            try {
+                let url = `${API_CONFIG.baseUrl}/admin/orders?page=${page}&limit=20`;
+                if (statusFilter) url += `&status=${statusFilter}`;
+                if (searchInput) url += `&search=${encodeURIComponent(searchInput)}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    renderOrders(result.data.orders || []);
+                    document.getElementById('ordersCount').textContent = `共 ${result.data.total || 0} 条记录`;
+                }
+            } catch (error) {
+                console.error('加载订单失败:', error);
+            }
+        }
+
+        function renderOrders(orders) {
+            const tbody = document.getElementById('ordersTable');
+
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-on-surface-variant">暂无订单</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = orders.map(order => `
+                <tr class="table-row border-b border-outline-variant/10">
+                    <td class="py-3 px-4 text-sm font-mono">${order.orderNo}</td>
+                    <td class="py-3 px-4 text-sm">${order.ticketName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${order.userName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${maskPhone(order.userPhone)}</td>
+                    <td class="py-3 px-4 text-sm">${order.ticketQuantity || 1}</td>
+                    <td class="py-3 px-4 text-sm">¥${(order.totalAmount / 100).toFixed(2)}</td>
+                    <td class="py-3 px-4 text-sm status-${order.paymentStatus.toLowerCase()}">${getStatusText(order.paymentStatus)}</td>
+                    <td class="py-3 px-4 text-sm text-on-surface-variant">${formatDate(order.createdAt)}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <button onclick="viewOrderDetail('${order.orderNo}')" class="text-primary hover:underline">详情</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadTickets() {
+            const statusFilter = document.getElementById('ticketStatusFilter').value;
+            const searchInput = document.getElementById('ticketSearchInput').value;
+
+            try {
+                let url = `${API_CONFIG.baseUrl}/admin/tickets`;
+                if (statusFilter) url += `?status=${statusFilter}`;
+                if (searchInput) url += `${statusFilter ? '&' : '?'}search=${encodeURIComponent(searchInput)}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    renderTickets(result.data.tickets || []);
+                }
+            } catch (error) {
+                console.error('加载票券失败:', error);
+            }
+        }
+
+        function renderTickets(tickets) {
+            const tbody = document.getElementById('ticketsTable');
+
+            if (tickets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-on-surface-variant">暂无票券</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tickets.map(ticket => `
+                <tr class="table-row border-b border-outline-variant/10">
+                    <td class="py-3 px-4 text-sm font-mono">${ticket.ticketNo}</td>
+                    <td class="py-3 px-4 text-sm">${ticket.ticketName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${ticket.userName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${maskPhone(ticket.userPhone)}</td>
+                    <td class="py-3 px-4 text-sm status-${ticket.status.toLowerCase()}">${getTicketStatusText(ticket.status)}</td>
+                    <td class="py-3 px-4 text-sm text-on-surface-variant">${ticket.usedAt ? formatDate(ticket.usedAt) : '-'}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <button onclick="viewTicketDetail('${ticket.ticketNo}')" class="text-primary hover:underline">详情</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadExhibitors() {
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/exhibitors`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    renderExhibitors(result.data.exhibitors || []);
+                }
+            } catch (error) {
+                console.error('加载展商失败:', error);
+            }
+        }
+
+        function renderExhibitors(exhibitors) {
+            const tbody = document.getElementById('exhibitorsTable');
+
+            if (exhibitors.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-on-surface-variant">暂无展商</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = exhibitors.map(exhibitor => `
+                <tr class="table-row border-b border-outline-variant/10">
+                    <td class="py-3 px-4 text-sm">${exhibitor.id}</td>
+                    <td class="py-3 px-4 text-sm font-medium">${exhibitor.name}</td>
+                    <td class="py-3 px-4 text-sm">${exhibitor.booth || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${exhibitor.category || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${exhibitor.country || '-'}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <button onclick="editExhibitor(${exhibitor.id})" class="text-primary hover:underline mr-3">编辑</button>
+                        <button onclick="deleteExhibitor(${exhibitor.id})" class="text-error hover:underline">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadCheckinRecords() {
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/admin/checkins?limit=50`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    renderCheckinRecords(result.data.checkins || []);
+                }
+            } catch (error) {
+                console.error('加载核销记录失败:', error);
+            }
+        }
+
+        function renderCheckinRecords(checkins) {
+            const tbody = document.getElementById('checkinRecordsTable');
+
+            if (checkins.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-on-surface-variant">暂无核销记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = checkins.map(checkin => `
+                <tr class="table-row border-b border-outline-variant/10">
+                    <td class="py-3 px-4 text-sm font-mono">${checkin.ticketNo}</td>
+                    <td class="py-3 px-4 text-sm">${checkin.userName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${checkin.ticketName || '-'}</td>
+                    <td class="py-3 px-4 text-sm">${formatDate(checkin.checkedAt)}</td>
+                    <td class="py-3 px-4 text-sm">${checkin.checkedBy || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function processCheckin() {
+            const input = document.getElementById('checkinInput').value.trim();
+            const resultDiv = document.getElementById('checkinResult');
+
+            if (!input) {
+                showCheckinResult('error', '请输入票号或二维码');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/tickets/checkin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketNo: input })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    showCheckinResult('success', `核销成功：${result.data.ticketName}`);
+                    document.getElementById('checkinInput').value = '';
+                    loadCheckinRecords();
+                } else {
+                    showCheckinResult('error', result.message || '核销失败');
+                }
+            } catch (error) {
+                showCheckinResult('error', '网络错误，请重试');
+            }
+        }
+
+        function showCheckinResult(type, message) {
+            const resultDiv = document.getElementById('checkinResult');
+            resultDiv.classList.remove('hidden');
+            resultDiv.className = `mt-6 p-4 rounded-lg ${type === 'success' ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`;
+            resultDiv.textContent = message;
+
+            setTimeout(() => {
+                resultDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        async function viewOrderDetail(orderNo) {
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/admin/orders/${orderNo}`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    const order = result.data;
+                    document.getElementById('orderDetailContent').innerHTML = `
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">订单号</p>
+                                    <p class="font-mono">${order.orderNo}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">订单状态</p>
+                                    <p class="status-${order.paymentStatus.toLowerCase()}">${getStatusText(order.paymentStatus)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">购票人</p>
+                                    <p>${order.userName || '-'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">手机号</p>
+                                    <p>${maskPhone(order.userPhone)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">票种</p>
+                                    <p>${order.ticketName || '-'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">数量</p>
+                                    <p>${order.ticketQuantity || 1}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">总金额</p>
+                                    <p class="font-bold">¥${(order.totalAmount / 100).toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant">创建时间</p>
+                                    <p>${formatDate(order.createdAt)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('orderDetailModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('加载订单详情失败:', error);
+            }
+        }
+
+        function viewTicketDetail(ticketNo) {
+            // TODO: Implement ticket detail modal
+            alert('票券详情功能待实现');
+        }
+
+        function showAddExhibitorModal() {
+            // TODO: Implement add exhibitor modal
+            alert('添加展商功能待实现');
+        }
+
+        function editExhibitor(id) {
+            // TODO: Implement edit exhibitor
+            alert('编辑展商功能待实现');
+        }
+
+        async function deleteExhibitor(id) {
+            if (!confirm('确定要删除此展商吗？')) return;
+
+            try {
+                const response = await fetch(`${API_CONFIG.baseUrl}/admin/exhibitors/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadExhibitors();
+                }
+            } catch (error) {
+                console.error('删除展商失败:', error);
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function refreshData() {
+            showSection(currentSection);
+        }
+
+        // Utility functions
+        function maskPhone(phone) {
+            if (!phone) return '-';
+            return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': '待支付',
+                'PAID': '已支付',
+                'CANCELLED': '已取消',
+                'REFUNDED': '已退款'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getTicketStatusText(status) {
+            const statusMap = {
+                'UNUSED': '未使用',
+                'USED': '已使用',
+                'EXPIRED': '已过期'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // Filter event listeners
+        document.getElementById('orderStatusFilter')?.addEventListener('change', () => loadOrders(1));
+        document.getElementById('orderSearchInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadOrders(1);
+        });
+        document.getElementById('ticketStatusFilter')?.addEventListener('change', () => loadTickets());
+        document.getElementById('ticketSearchInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadTickets();
+        });
+    </script>
+</body>
+</html>

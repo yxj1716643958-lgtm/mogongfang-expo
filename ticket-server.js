@@ -1618,6 +1618,336 @@ async function issueTickets(connection, params) {
     return tickets;
 }
 
+// ==================== 管理后台API ====================
+
+/**
+ * 获取统计数据
+ */
+app.get('/api/v1/admin/stats', async (req, res) => {
+    try {
+        // 今日访客（用注册用户数代替）
+        const today = new Date().toISOString().split('T')[0];
+        const [todayUsers] = await pool.query(
+            'SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = ?',
+            [today]
+        );
+
+        // 票务销售总数
+        const [ticketStats] = await pool.query(
+            'SELECT COUNT(*) as count FROM orders WHERE order_status = ?',
+            ['PAID']
+        );
+
+        // 收入总额
+        const [revenueStats] = await pool.query(
+            'SELECT IFNULL(SUM(paid_amount), 0) as total FROM orders WHERE payment_status = ?',
+            ['PAID']
+        );
+
+        // 核销数量
+        const [checkinStats] = await pool.query(
+            'SELECT COUNT(*) as count FROM verification_records'
+        );
+
+        res.json(successResponse({
+            todayVisitors: todayUsers[0].count,
+            totalTickets: ticketStats[0].count,
+            totalRevenue: revenueStats[0].total || 0,
+            totalCheckins: checkinStats[0].count
+        }));
+
+    } catch (error) {
+        console.error('获取统计数据失败:', error);
+        res.status(500).json(errorResponse('获取统计数据失败'));
+    }
+});
+
+/**
+ * 获取订单列表（管理后台）
+ */
+app.get('/api/v1/admin/orders', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const status = req.query.status;
+        const search = req.query.search;
+
+        let query = `
+            SELECT
+                o.id,
+                o.order_no,
+                o.user_name,
+                o.user_phone,
+                o.ticket_quantity,
+                o.total_amount,
+                o.order_status,
+                o.payment_status,
+                o.created_at,
+                o.ticket_info
+            FROM orders o
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (status) {
+            query += ' AND o.payment_status = ?';
+            params.push(status);
+        }
+
+        if (search) {
+            query += ' AND (o.order_no LIKE ? OR o.user_phone LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
+        }
+
+        query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+        params.push(limit, (page - 1) * limit);
+
+        const [orders] = await pool.query(query, params);
+
+        // 解析ticket_info获取票名
+        const ordersWithTicketName = orders.map(order => {
+            let ticketName = '-';
+            try {
+                const ticketInfo = typeof order.ticket_info === 'string'
+                    ? JSON.parse(order.ticket_info)
+                    : order.ticket_info;
+                ticketName = ticketInfo.ticketName || '-';
+            } catch (e) {
+                console.error('解析ticket_info失败:', e);
+            }
+            return {
+                ...order,
+                ticketName
+            };
+        });
+
+        // 获取总数
+        let countQuery = 'SELECT COUNT(*) as total FROM orders o WHERE 1=1';
+        const countParams = [];
+
+        if (status) {
+            countQuery += ' AND o.payment_status = ?';
+            countParams.push(status);
+        }
+
+        if (search) {
+            countQuery += ' AND (o.order_no LIKE ? OR o.user_phone LIKE ?)';
+            countParams.push(`%${search}%`, `%${search}%`);
+        }
+
+        const [countResult] = await pool.query(countQuery, countParams);
+
+        res.json(successResponse({
+            orders: ordersWithTicketName,
+            total: countResult[0].total,
+            page,
+            limit
+        }));
+
+    } catch (error) {
+        console.error('获取订单列表失败:', error);
+        res.status(500).json(errorResponse('获取订单列表失败'));
+    }
+});
+
+/**
+ * 获取订单详情（管理后台）
+ */
+app.get('/api/v1/admin/orders/:orderNo', async (req, res) => {
+    try {
+        const { orderNo } = req.params;
+
+        const [orders] = await pool.query(
+            `SELECT o.* FROM orders o WHERE o.order_no = ?`,
+            [orderNo]
+        );
+
+        if (orders.length === 0) {
+            return res.status(404).json(errorResponse('订单不存在'));
+        }
+
+        const order = orders[0];
+
+        // 解析ticket_info获取票名
+        let ticketName = '-';
+        try {
+            const ticketInfo = typeof order.ticket_info === 'string'
+                ? JSON.parse(order.ticket_info)
+                : order.ticket_info;
+            ticketName = ticketInfo.ticketName || '-';
+        } catch (e) {
+            console.error('解析ticket_info失败:', e);
+        }
+
+        // 获取订单关联的票券
+        const [tickets] = await pool.query(
+            'SELECT * FROM tickets WHERE order_no = ?',
+            [orderNo]
+        );
+
+        res.json(successResponse({
+            order: {
+                ...order,
+                ticketName
+            },
+            tickets
+        }));
+
+    } catch (error) {
+        console.error('获取订单详情失败:', error);
+        res.status(500).json(errorResponse('获取订单详情失败'));
+    }
+});
+
+/**
+ * 获取票券列表（管理后台）
+ */
+app.get('/api/v1/admin/tickets', async (req, res) => {
+    try {
+        const status = req.query.status;
+        const search = req.query.search;
+
+        let query = `
+            SELECT
+                t.ticket_no,
+                t.user_name,
+                t.user_phone,
+                t.ticket_name,
+                t.ticket_status,
+                t.used_at,
+                t.created_at
+            FROM tickets t
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (status) {
+            query += ' AND t.ticket_status = ?';
+            params.push(status);
+        }
+
+        if (search) {
+            query += ' AND (t.ticket_no LIKE ? OR t.user_phone LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
+        }
+
+        query += ' ORDER BY t.created_at DESC LIMIT 100';
+
+        const [tickets] = await pool.query(query, params);
+
+        res.json(successResponse({ tickets }));
+
+    } catch (error) {
+        console.error('获取票券列表失败:', error);
+        res.status(500).json(errorResponse('获取票券列表失败'));
+    }
+});
+
+/**
+ * 获取核销记录（管理后台）
+ */
+app.get('/api/v1/admin/checkins', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+
+        const [checkins] = await pool.query(
+            `SELECT
+                vr.ticket_no,
+                vr.verify_time as checked_at,
+                vr.verifier_id as checked_by,
+                t.user_name,
+                t.ticket_name
+            FROM verification_records vr
+            LEFT JOIN tickets t ON vr.ticket_no = t.ticket_no
+            ORDER BY vr.verify_time DESC
+            LIMIT ?`,
+            [limit]
+        );
+
+        res.json(successResponse({ checkins }));
+
+    } catch (error) {
+        console.error('获取核销记录失败:', error);
+        res.status(500).json(errorResponse('获取核销记录失败'));
+    }
+});
+
+/**
+ * 票券核销接口（管理后台）
+ */
+app.post('/api/v1/tickets/checkin', async (req, res) => {
+    const connection = await pool;
+
+    try {
+        const { ticketNo } = req.body;
+
+        if (!ticketNo) {
+            return res.status(400).json(errorResponse('票号不能为空'));
+        }
+
+        // 查询票券
+        const [tickets] = await pool.query(
+            'SELECT * FROM tickets WHERE ticket_no = ?',
+            [ticketNo]
+        );
+
+        if (tickets.length === 0) {
+            return res.status(404).json(errorResponse('票券不存在'));
+        }
+
+        const ticket = tickets[0];
+
+        // 检查票券状态
+        if (ticket.ticket_status === 'USED') {
+            return res.status(400).json(errorResponse('票券已使用'));
+        }
+
+        if (ticket.ticket_status === 'EXPIRED') {
+            return res.status(400).json(errorResponse('票券已过期'));
+        }
+
+        if (ticket.ticket_status !== 'ACTIVE') {
+            return res.status(400).json(errorResponse('票券状态异常'));
+        }
+
+        // 检查有效期
+        const now = new Date();
+        if (ticket.valid_start_time && now < new Date(ticket.valid_start_time)) {
+            return res.status(400).json(errorResponse('票券尚未生效'));
+        }
+
+        if (ticket.valid_end_time && now > new Date(ticket.valid_end_time)) {
+            return res.status(400).json(errorResponse('票券已过期'));
+        }
+
+        // 核销票券
+        await pool.query(
+            `UPDATE tickets SET
+                ticket_status = 'USED',
+                used_at = NOW()
+            WHERE ticket_no = ?`,
+            [ticketNo]
+        );
+
+        // 记录核销记录
+        await pool.query(
+            `INSERT INTO verification_records (ticket_no, verify_time, verifier_id)
+            VALUES (?, NOW(), 'ADMIN')`,
+            [ticketNo]
+        );
+
+        res.json(successResponse({
+            ticketNo: ticket.ticket_no,
+            ticketName: ticket.ticket_name,
+            userName: ticket.user_name
+        }, '核销成功'));
+
+    } catch (error) {
+        console.error('核销失败:', error);
+        res.status(500).json(errorResponse('核销失败'));
+    }
+});
+
 // ==================== 错误处理 ====================
 app.use((err, req, res, next) => {
     console.error('服务器错误:', err);
