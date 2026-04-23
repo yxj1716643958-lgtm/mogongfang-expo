@@ -98,7 +98,8 @@
       "Bash(node test-signing.js)",
       "Bash(node test-huifu-api.js)",
       "Bash(node test-huifu-urls.js)",
-      "Bash(node test-huifu-sandbox.js)"
+      "Bash(node test-huifu-sandbox.js)",
+      "Bash(ssh *)"
     ]
   }
 }
