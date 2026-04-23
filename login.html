@@ -148,7 +148,9 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:3002/api/auth';
+        const API_BASE = window.location.hostname === 'localhost'
+            ? 'http://localhost:3002/api/auth'
+            : 'https://101.200.126.62/api/auth';  // 阿里云ECS认证服务
         let currentTab = 'password';
 
         function switchTab(tab) {
