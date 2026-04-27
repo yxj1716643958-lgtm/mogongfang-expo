@@ -225,7 +225,10 @@
 
     <script>
         // ==================== 配置 ====================
-        const API_BASE = 'https://mogongfang-expo-api.onrender.com/api/v1';
+        // 根据环境自动选择API地址
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3001/api/v1'
+            : 'https://mogongfang-expo-api.onrender.com/api/v1';  // 生产环境API地址
 
         // 操作员信息（实际应从登录获取）
         const OPERATOR_INFO = {
@@ -312,10 +315,13 @@
         // ==================== 票券验证 ====================
         async function verifyTicket(qrContent) {
             try {
-                const response = await fetch(`${API_BASE}/tickets/verify-preview`, {
+                const response = await fetch(`${API_BASE}/verify/preview`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ qr_content: qrContent })
+                    body: JSON.stringify({
+                        qrContent: qrContent,
+                        verifierInfo: OPERATOR_INFO
+                    })
                 });
 
                 const result = await response.json();
@@ -351,15 +357,15 @@
                 <div class="space-y-3">
                     <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
                         <span class="text-on-surface-variant text-sm">票种</span>
-                        <span class="font-bold">${ticket.ticket_name}</span>
+                        <span class="font-bold">${ticket.ticketName || '邀请函票'}</span>
                     </div>
                     <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
                         <span class="text-on-surface-variant text-sm">姓名</span>
-                        <span class="font-bold">${ticket.holder_name}</span>
+                        <span class="font-bold">${ticket.holderName || '--'}</span>
                     </div>
                     <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
                         <span class="text-on-surface-variant text-sm">手机</span>
-                        <span class="font-bold">${ticket.holder_mobile_last4}</span>
+                        <span class="font-bold">${ticket.holderPhone || '--'}</span>
                     </div>
                     <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
                         <span class="text-on-surface-variant text-sm">状态</span>
@@ -368,7 +374,7 @@
                         </span>
                     </div>
                     <div class="text-on-surface-variant text-sm">
-                        <p>有效期：${formatDateTime(ticket.valid_start_time)} - ${formatDateTime(ticket.valid_end_time)}</p>
+                        <p>有效期：${formatDateTime(ticket.validStartTime)} - ${formatDateTime(ticket.validEndTime)}</p>
                     </div>
                 </div>
             `;
@@ -390,12 +396,13 @@
             confirmBtn.textContent = '核销中...';
 
             try {
-                const response = await fetch(`${API_BASE}/tickets/writeoff`, {
+                // 使用正确的API端点：/api/v1/verify/scan
+                const response = await fetch(`${API_BASE}/verify/scan`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        ticket_code: currentTicket.qr_content,
-                        ...OPERATOR_INFO
+                        qrCodeToken: currentTicket.qr_content || currentTicket.ticketNo,
+                        verifierInfo: OPERATOR_INFO
                     })
                 });
 
@@ -457,17 +464,17 @@
             container.innerHTML = tickets.map(ticket => `
                 <div class="bg-surface rounded-lg p-4 border border-outline-variant hover:border-primary/50 transition">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-bold">${ticket.ticket_name}</span>
+                        <span class="font-bold">${ticket.ticketName || '票券'}</span>
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary">
                             ✓ 有效
                         </span>
                     </div>
                     <div class="text-sm text-on-surface-variant space-y-1">
-                        <p>姓名：${ticket.holder_name}</p>
-                        <p>手机：${ticket.holder_mobile_last4}</p>
-                        <p class="font-mono text-xs">票号：${ticket.ticket_no}</p>
+                        <p>姓名：${ticket.userName || '--'}</p>
+                        <p>手机：${ticket.userPhone ? maskPhone(ticket.userPhone) : '--'}</p>
+                        <p class="font-mono text-xs">票号：${ticket.ticketNo || '--'}</p>
                     </div>
-                    <button onclick='writeoffByCode("${ticket.ticket_no}")'
+                    <button onclick='writeoffByCode("${ticket.qrContent || ticket.ticketNo || ''}")'
                         class="w-full mt-3 bg-primary-container text-on-primary-container py-2 rounded font-bold hover:brightness-110 transition">
                         选择此票核销
                     </button>
@@ -475,9 +482,33 @@
             `).join('');
         }
 
-        async function writeoffByCode(ticketNo) {
-            // 这种方式需要先通过ticketNo获取qr_content
-            alert('功能开发中，请使用扫码方式核销');
+        async function writeoffByCode(qrCodeToken) {
+            if (!confirm(`确认核销此票券？`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/verify/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qrCodeToken: qrCodeToken,
+                        verifierInfo: OPERATOR_INFO
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    showResultModal('success', '核销成功', result.data);
+                    loadTodayStats();
+                    loadRecentRecords();
+                    document.getElementById('searchResults').classList.add('hidden');
+                } else {
+                    showResultModal('error', result.message || '核销失败', result.data);
+                }
+            } catch (error) {
+                console.error('核销失败:', error);
+                showResultModal('error', '网络错误，请重试');
+            }
         }
 
         // ==================== 结果弹窗 ====================

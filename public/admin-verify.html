@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>管理员核销 - 东北亚数字文创博览会</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .technical-grid {
+            background-image:
+                linear-gradient(to right, rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .qr-display {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00e5ff;
+            box-shadow: 0 0 10px #00e5ff;
+            animation: scan 2s linear infinite;
+            display: none;
+        }
+        .scan-line.active {
+            display: block;
+        }
+        @keyframes scan {
+            0%, 100% { top: 0; }
+            50% { top: calc(100% - 2px); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen technical-grid">
+    <!-- 登录界面 -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center px-6">
+        <div class="max-w-md w-full">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-headline font-bold mb-2 text-primary">管理员核销</h1>
+                <p class="text-on-surface-variant">请输入管理员密码进入</p>
+            </div>
+
+            <div class="bg-surface-container rounded-xl p-8 border border-primary/20">
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">管理员密码</label>
+                        <input type="password" id="adminPassword"
+                            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 focus:border-primary focus:outline-none"
+                            placeholder="请输入管理员密码">
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-primary-container text-on-primary-container py-3 rounded-lg font-bold hover:brightness-110 transition">
+                        进入核销系统
+                    </button>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <a href="index.html" class="text-sm text-on-surface-variant hover:text-primary transition">
+                        ← 返回首页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核销界面 -->
+    <div id="verifyScreen" class="hidden min-h-screen">
+        <!-- Header -->
+        <nav class="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl border-b border-primary/20 px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary text-2xl">verified_user</span>
+                <span class="font-headline font-bold text-lg">管理员核销系统</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="currentTime" class="text-sm text-on-surface-variant"></span>
+                <button onclick="logout()" class="text-sm text-error hover:text-error/80 transition">
+                    <span class="material-symbols-outlined text-sm align-middle">logout</span>
+                    退出
+                </button>
+            </div>
+        </nav>
+
+        <main class="pt-24 pb-12 px-6 max-w-6xl mx-auto">
+            <!-- 统计卡片 -->
+            <section class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-surface-container-low rounded-xl p-6 border border-primary/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-on-surface-variant text-sm mb-1">今日核销</p>
+                            <p id="successCount" class="text-4xl font-headline font-bold text-primary">0</p>
+                        </div>
+                        <span class="material-symbols-outlined text-primary/30 text-5xl">check_circle</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low rounded-xl p-6 border border-tertiary/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-on-surface-variant text-sm mb-1">邀请函</p>
+                            <p id="invitationCount" class="text-4xl font-headline font-bold text-tertiary">0</p>
+                        </div>
+                        <span class="material-symbols-outlined text-tertiary/30 text-5xl">card_membership</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low rounded-xl p-6 border border-error/20">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-on-surface-variant text-sm mb-1">失败次数</p>
+                            <p id="failCount" class="text-4xl font-headline font-bold text-error">0</p>
+                        </div>
+                        <span class="material-symbols-outlined text-error/30 text-5xl">cancel</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 邀请函二维码展示 -->
+            <section class="mb-8 bg-tertiary/10 rounded-xl p-6 border border-tertiary/20">
+                <h2 class="font-headline text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-tertiary">card_membership</span>
+                    邀请函二维码展示
+                </h2>
+                <p class="text-on-surface-variant text-sm mb-4">向参会人员展示此二维码，扫码即可获得邀请函</p>
+
+                <div class="bg-white rounded-xl p-8 text-center">
+                    <div id="invitationQRCode" class="qr-display mb-4">
+                        <!-- 二维码将在这里生成 -->
+                    </div>
+                    <p class="text-gray-800 text-sm font-bold">扫描申请邀请函</p>
+                </div>
+            </section>
+
+            <!-- 核验操作区 -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 扫码核验 -->
+                <div class="bg-surface-container rounded-xl p-6">
+                    <h2 class="font-headline text-xl font-bold mb-4 flex items-center gap-2 text-primary">
+                        <span class="material-symbols-outlined text-primary">qr_code_scanner</span>
+                        扫码核验
+                    </h2>
+
+                    <div class="scanner-container mx-auto bg-surface border-2 border-primary/30 rounded-lg relative" style="width: 300px; height: 300px;">
+                        <div id="reader"></div>
+                        <div id="scanLine" class="scan-line"></div>
+                        <div id="scannerPlaceholder" class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center p-6">
+                                <span class="material-symbols-outlined text-4xl text-primary/50 block mb-2">qr_code_scanner</span>
+                                <p class="text-on-surface-variant text-sm">点击下方按钮启动扫码</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-4">
+                        <button id="startScanBtn" onclick="startScanner()"
+                            class="flex-1 bg-primary-container text-on-primary-container py-3 px-6 font-bold rounded-lg hover:brightness-110 transition flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">camera_alt</span>
+                            启动扫码
+                        </button>
+                        <button id="stopScanBtn" onclick="stopScanner()"
+                            class="flex-1 bg-surface border border-outline-variant py-3 px-6 rounded-lg hover:bg-surface-container transition hidden flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">stop</span>
+                            停止扫码
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 手机号查询 -->
+                <div class="bg-surface-container rounded-xl p-6">
+                    <h2 class="font-headline text-xl font-bold mb-4 flex items-center gap-2 text-secondary">
+                        <span class="material-symbols-outlined text-secondary">search</span>
+                        手机号查询
+                    </h2>
+
+                    <div class="space-y-4">
+                        <p class="text-on-surface-variant text-sm">输入手机号查询该用户的所有票券</p>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">手机号</label>
+                            <input type="tel" id="searchMobile"
+                                class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 focus:border-secondary focus:outline-none"
+                                placeholder="请输入11位手机号" pattern="[0-9]{11}">
+                        </div>
+
+                        <button onclick="searchByMobile()"
+                            class="w-full bg-secondary-container text-on-secondary-container py-3 px-6 font-bold rounded-lg hover:brightness-110 transition flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">search</span>
+                            查询票券
+                        </button>
+
+                        <!-- 查询结果 -->
+                        <div id="searchResults" class="hidden space-y-3 mt-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 最近核销记录 -->
+            <section class="bg-surface-container rounded-xl p-6">
+                <h2 class="font-headline text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">history</span>
+                    最近核销记录
+                </h2>
+                <div id="recentRecords" class="space-y-2">
+                    <p class="text-on-surface-variant text-sm text-center py-8">暂无核销记录</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 票券详情弹窗 -->
+    <div id="ticketModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-surface-container rounded-xl p-6 w-full max-w-md">
+                <h3 class="font-headline text-xl font-bold mb-4 text-center">票券详情</h3>
+
+                <div id="ticketInfo" class="space-y-3 mb-6">
+                    <!-- 动态填充 -->
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="closeTicketModal()"
+                        class="flex-1 border border-outline-variant py-3 rounded-lg hover:bg-surface transition">
+                        取消
+                    </button>
+                    <button id="confirmWriteoffBtn" onclick="confirmWriteoff()"
+                        class="flex-1 bg-primary-container text-on-primary-container py-3 rounded-lg hover:brightness-110 transition font-bold">
+                        确认核销
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div id="resultContent" class="rounded-xl p-8 w-full max-w-sm text-center text-white">
+                <!-- 动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        // 管理员密码（生产环境应该从后端验证）
+        const ADMIN_PASSWORD = 'admin2024';
+
+        // API配置
+        const API_BASE = window.location.hostname === 'localhost'
+            ? 'http://localhost:3001/api/v1'
+            : 'https://mogongfang-expo-api.onrender.com/api/v1';
+
+        // 操作员信息
+        const OPERATOR_INFO = {
+            operatorId: 'ADMIN001',
+            operatorName: '管理员',
+            deviceId: 'WEB_TERMINAL',
+            gateName: '主入口'
+        };
+
+        let currentQrCodeToken = null; // 保存当前票券的二维码token
+
+        // ==================== 登录验证 ====================
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('verifyScreen').classList.remove('hidden');
+                initVerifySystem();
+            } else {
+                alert('密码错误，请重试');
+            }
+        });
+
+        // ==================== 初始化核销系统 ====================
+        function initVerifySystem() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            generateInvitationQRCode();
+            loadTodayStats();
+            loadRecentRecords();
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-CN');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+
+        // ==================== 邀请函二维码 ====================
+        function generateInvitationQRCode() {
+            // 生成邀请函申请页面的二维码
+            const inviteUrl = window.location.origin + '/invitation.html';
+            const qrContainer = document.getElementById('invitationQRCode');
+
+            new QRCode(qrContainer, {
+                text: inviteUrl,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        // ==================== 扫码功能 ====================
+        let html5QrcodeScanner = null;
+
+        function startScanner() {
+            const scannerPlaceholder = document.getElementById('scannerPlaceholder');
+            const scanLine = document.getElementById('scanLine');
+            const startBtn = document.getElementById('startScanBtn');
+            const stopBtn = document.getElementById('stopScanBtn');
+
+            scannerPlaceholder.classList.add('hidden');
+            scanLine.classList.add('active');
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess
+            ).catch(err => {
+                console.error('启动扫码失败:', err);
+                alert('启动摄像头失败，请确保已授权摄像头权限');
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('scannerPlaceholder').classList.remove('hidden');
+                    document.getElementById('scanLine').classList.remove('active');
+                    document.getElementById('startScanBtn').classList.remove('hidden');
+                    document.getElementById('stopScanBtn').classList.add('hidden');
+                    html5QrcodeScanner = null;
+                }).catch(err => {
+                    console.error('停止扫码失败:', err);
+                });
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.pause();
+                document.getElementById('scanLine').classList.remove('active');
+            }
+            verifyTicket(decodedText);
+        }
+
+        // ==================== 票券验证 ====================
+        async function verifyTicket(qrContent) {
+            try {
+                const response = await fetch(`${API_BASE}/verify/preview`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qrContent: qrContent,
+                        verifierInfo: OPERATOR_INFO
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    showTicketModal(result.data);
+                } else {
+                    showResultModal('error', result.message);
+                }
+
+                resumeScanning();
+            } catch (error) {
+                console.error('验证失败:', error);
+                showResultModal('error', '网络错误，请重试');
+                resumeScanning();
+            }
+        }
+
+        function resumeScanning() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.resume();
+                document.getElementById('scanLine').classList.add('active');
+            }
+        }
+
+        // ==================== 票券详情弹窗 ====================
+        function showTicketModal(ticket) {
+            // 保存二维码token用于后续核销
+            currentQrCodeToken = ticket.qrCodeToken || ticket.ticketNo;
+
+            document.getElementById('ticketInfo').innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
+                        <span class="text-on-surface-variant text-sm">票种</span>
+                        <span class="font-bold">${ticket.ticketName || '邀请函票'}</span>
+                    </div>
+                    <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
+                        <span class="text-on-surface-variant text-sm">姓名</span>
+                        <span class="font-bold">${ticket.holderName || '--'}</span>
+                    </div>
+                    <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
+                        <span class="text-on-surface-variant text-sm">手机</span>
+                        <span class="font-bold">${ticket.holderPhone || '--'}</span>
+                    </div>
+                    ${ticket.holderIdCard ? `
+                    <div class="flex justify-between items-center pb-3 border-b border-outline-variant">
+                        <span class="text-on-surface-variant text-sm">身份证</span>
+                        <span class="font-bold font-mono text-sm">${ticket.holderIdCard}</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex justify-between items-center">
+                        <span class="text-on-surface-variant text-sm">状态</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary">
+                            ✓ 有效
+                        </span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ticketModal').classList.remove('hidden');
+        }
+
+        function closeTicketModal() {
+            document.getElementById('ticketModal').classList.add('hidden');
+            currentQrCodeToken = null; // 清空保存的token
+        }
+
+        // ==================== 确认核销 ====================
+        async function confirmWriteoff() {
+            const confirmBtn = document.getElementById('confirmWriteoffBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '核销中...';
+
+            try {
+                // 使用保存的二维码token
+                if (!currentQrCodeToken) {
+                    alert('无法获取票券信息，请重新扫码');
+                    closeTicketModal();
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '确认核销';
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}/verify/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qrCodeToken: currentQrCodeToken,
+                        verifierInfo: OPERATOR_INFO
+                    })
+                });
+
+                const result = await response.json();
+                closeTicketModal();
+
+                if (result.code === 'SUCCESS') {
+                    showResultModal('success', '核销成功');
+                    loadTodayStats();
+                    loadRecentRecords();
+                } else {
+                    showResultModal('error', result.message || '核销失败');
+                }
+            } catch (error) {
+                console.error('核销失败:', error);
+                closeTicketModal();
+                showResultModal('error', '网络错误，请重试');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '确认核销';
+            }
+        }
+
+        // ==================== 手机号查询 ====================
+        async function searchByMobile() {
+            const mobile = document.getElementById('searchMobile').value.trim();
+
+            if (!/^1[3-9]\d{9}$/.test(mobile)) {
+                alert('请输入正确的手机号');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/tickets/search?mobile=${mobile}`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS' && result.data.tickets && result.data.tickets.length > 0) {
+                    showSearchResults(result.data.tickets);
+                } else {
+                    showResultModal('warning', '未找到有效票券');
+                }
+            } catch (error) {
+                console.error('查询失败:', error);
+                showResultModal('error', '网络错误，请重试');
+            }
+        }
+
+        function showSearchResults(tickets) {
+            const container = document.getElementById('searchResults');
+            container.classList.remove('hidden');
+
+            container.innerHTML = tickets.map(ticket => `
+                <div class="bg-surface rounded-lg p-4 border border-outline-variant hover:border-primary/50 transition">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="font-bold">${ticket.ticket_name || '票券'}</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary">
+                            ✓ 有效
+                        </span>
+                    </div>
+                    <div class="text-sm text-on-surface-variant space-y-1">
+                        <p>姓名：${ticket.user_name || '--'}</p>
+                        <p>手机：${ticket.user_phone ? maskPhone(ticket.user_phone) : '--'}</p>
+                        <p class="font-mono text-xs">票号：${ticket.ticket_no || '--'}</p>
+                    </div>
+                    <button onclick='writeoffByCode("${ticket.qrContent || ticket.ticket_no || ''}")'
+                        class="w-full mt-3 bg-primary-container text-on-primary-container py-2 rounded font-bold hover:brightness-110 transition">
+                        核销此票
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function writeoffByCode(ticketNo) {
+            if (!confirm(`确认核销票券 ${ticketNo}？`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/verify/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qrCodeToken: ticketNo,
+                        verifierInfo: OPERATOR_INFO
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('searchResults').classList.add('hidden');
+
+                if (result.code === 'SUCCESS') {
+                    showResultModal('success', '核销成功');
+                    loadTodayStats();
+                    loadRecentRecords();
+                } else {
+                    showResultModal('error', result.message || '核销失败');
+                }
+            } catch (error) {
+                console.error('核销失败:', error);
+                showResultModal('error', '网络错误，请重试');
+            }
+        }
+
+        // ==================== 结果弹窗 ====================
+        function showResultModal(type, message) {
+            const modal = document.getElementById('resultModal');
+            const content = document.getElementById('resultContent');
+
+            let html = '';
+            if (type === 'success') {
+                content.className = 'rounded-xl p-8 w-full max-w-sm text-center text-white bg-gradient-to-br from-green-600 to-green-700';
+                html = `
+                    <span class="material-symbols-outlined text-6xl block mb-4">check_circle</span>
+                    <h3 class="text-2xl font-bold mb-2">核销成功</h3>
+                    <p class="mb-4">${message}</p>
+                    <button onclick="closeResultModal()" class="mt-6 bg-white/20 hover:bg-white/30 px-8 py-3 rounded-lg font-bold transition">
+                        继续
+                    </button>
+                `;
+            } else if (type === 'error') {
+                content.className = 'rounded-xl p-8 w-full max-w-sm text-center text-white bg-gradient-to-br from-red-600 to-red-700';
+                html = `
+                    <span class="material-symbols-outlined text-6xl block mb-4">error</span>
+                    <h3 class="text-2xl font-bold mb-2">核销失败</h3>
+                    <p class="mb-4">${message}</p>
+                    <button onclick="closeResultModal()" class="mt-6 bg-white/20 hover:bg-white/30 px-8 py-3 rounded-lg font-bold transition">
+                        关闭
+                    </button>
+                `;
+            } else if (type === 'warning') {
+                content.className = 'rounded-xl p-8 w-full max-w-sm text-center text-white bg-gradient-to-br from-yellow-600 to-yellow-700';
+                html = `
+                    <span class="material-symbols-outlined text-6xl block mb-4">warning</span>
+                    <h3 class="text-2xl font-bold mb-2">${message}</h3>
+                    <button onclick="closeResultModal()" class="mt-6 bg-white/20 hover:bg-white/30 px-8 py-3 rounded-lg font-bold transition">
+                        关闭
+                    </button>
+                `;
+            }
+
+            content.innerHTML = html;
+            modal.classList.remove('hidden');
+
+            if (type === 'success') {
+                setTimeout(closeResultModal, 2000);
+            }
+        }
+
+        function closeResultModal() {
+            document.getElementById('resultModal').classList.add('hidden');
+        }
+
+        // ==================== 统计和记录 ====================
+        async function loadTodayStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`${API_BASE}/verify/records?start_date=${today}&end_date=${today}`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    const records = result.data.records;
+                    const successCount = records.filter(r => r.verify_result === 'SUCCESS' || r.verifyStatus === 'SUCCESS').length;
+                    const failCount = records.length - successCount;
+
+                    document.getElementById('successCount').textContent = successCount;
+                    document.getElementById('failCount').textContent = failCount;
+
+                    // 计算邀请函数量
+                    const inviteCount = records.filter(r => r.ticket_name && r.ticket_name.includes('邀请')).length;
+                    document.getElementById('invitationCount').textContent = inviteCount;
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+
+        async function loadRecentRecords() {
+            try {
+                const response = await fetch(`${API_BASE}/verify/records?page=1&page_size=10`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS' && result.data.records.length > 0) {
+                    const container = document.getElementById('recentRecords');
+                    const isSuccess = (status) => status === 'SUCCESS' || status === 'S';
+
+                    container.innerHTML = result.data.records.map(record => {
+                        const success = isSuccess(record.verify_result || record.verifyStatus);
+                        return `
+                            <div class="flex items-center justify-between py-2 px-4 rounded-lg ${success ? 'bg-primary/10' : 'bg-error/10'}">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined ${success ? 'text-primary' : 'text-error'}">
+                                        ${success ? 'check_circle' : 'cancel'}
+                                    </span>
+                                    <div>
+                                        <p class="text-sm font-bold">${record.visitor_name || record.ticket_name || '未知'}</p>
+                                        <p class="text-xs text-on-surface-variant">${formatTime(record.created_at || record.verify_time)}</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs ${success ? 'text-primary' : 'text-error'}">
+                                    ${success ? '✓' : '✗'}
+                                </span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('加载记录失败:', error);
+            }
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '--:--';
+            const date = new Date(dateStr);
+            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function maskPhone(phone) {
+            return phone ? phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '';
+        }
+
+        // ==================== 退出登录 ====================
+        function logout() {
+            if (confirm('确定要退出核销系统吗？')) {
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

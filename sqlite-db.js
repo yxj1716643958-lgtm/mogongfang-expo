@@ -24,6 +24,76 @@ function initDatabase() {
         fs.mkdirSync(dataDir, { recursive: true });
     }
 
+    // 迁移：添加缺失的列
+    try {
+        // 检查orders表
+        const columns = db.pragma('table_info(orders)');
+        const columnNames = columns.map(col => col.name);
+
+        // 需要添加的列
+        const requiredColumns = ['transaction_id', 'paid_at', 'user_id', 'user_idcard', 'verified_at', 'verified_by', 'verified_device', 'verify_location'];
+
+        for (const col of requiredColumns) {
+            if (!columnNames.includes(col)) {
+                console.log(`添加${col}列到orders表...`);
+                db.exec(`ALTER TABLE orders ADD COLUMN ${col} TEXT`);
+            }
+        }
+
+        // 检查tickets表
+        const ticketsColumns = db.pragma('table_info(tickets)');
+        const ticketsColumnNames = ticketsColumns.map(col => col.name);
+        const requiredTicketColumns = ['ticket_type_id', 'qr_code_token', 'qr_code_short', 'user_name', 'user_phone', 'user_idcard', 'id_card', 'id_card_hash', 'ticket_category', 'total_amount', 'used_at', 'invite_code', 'application_id', 'verified_at', 'verified_by'];
+
+        for (const col of requiredTicketColumns) {
+            if (!ticketsColumnNames.includes(col)) {
+                console.log(`添加${col}列到tickets表...`);
+                db.exec(`ALTER TABLE tickets ADD COLUMN ${col} TEXT`);
+            }
+        }
+
+        // 检查payment_records表
+        const paymentColumns = db.pragma('table_info(payment_records)');
+        const paymentColumnNames = paymentColumns.map(col => col.name);
+        const requiredPaymentColumns = ['order_id', 'payment_status', 'paid_amount', 'third_party_no', 'third_party_data', 'client_ip', 'error_code', 'error_message'];
+
+        for (const col of requiredPaymentColumns) {
+            if (!paymentColumnNames.includes(col)) {
+                console.log(`添加${col}列到payment_records表...`);
+                if (col === 'paid_amount' || col === 'third_party_no' || col === 'third_party_data') {
+                    db.exec(`ALTER TABLE payment_records ADD COLUMN ${col} TEXT`);
+                } else {
+                    db.exec(`ALTER TABLE payment_records ADD COLUMN ${col} TEXT`);
+                }
+            }
+        }
+
+        // 检查invitation_applications表
+        const invColumns = db.pragma('table_info(invitation_applications)');
+        const invColumnNames = invColumns.map(col => col.name);
+        const requiredInvColumns = ['applicant_idcard', 'applicant_idcard_hash', 'applicant_email', 'invite_code', 'category', 'ticket_type_id', 'apply_quantity', 'audit_status', 'audit_reason', 'source_type', 'client_ip'];
+
+        for (const col of requiredInvColumns) {
+            if (!invColumnNames.includes(col)) {
+                console.log(`添加${col}列到invitation_applications表...`);
+                db.exec(`ALTER TABLE invitation_applications ADD COLUMN ${col} TEXT`);
+            }
+        }
+
+        // 重命名列（如果需要）
+        if (invColumnNames.includes('application_status') && !invColumnNames.includes('audit_status')) {
+            console.log('重命名application_status为audit_status...');
+            db.exec(`ALTER TABLE invitation_applications RENAME COLUMN application_status TO audit_status`);
+        }
+        if (invColumnNames.includes('audit_opinion') && !invColumnNames.includes('audit_reason')) {
+            console.log('重命名audit_opinion为audit_reason...');
+            db.exec(`ALTER TABLE invitation_applications RENAME COLUMN audit_opinion TO audit_reason`);
+        }
+
+    } catch (e) {
+        console.log('迁移跳过或失败:', e.message);
+    }
+
     // 创建票种表
     db.exec(`
         CREATE TABLE IF NOT EXISTS ticket_types (
@@ -71,6 +141,7 @@ function initDatabase() {
             payment_method TEXT,
             payment_time TEXT,
             trade_no TEXT,
+            transaction_id TEXT,
             paid_amount REAL,
             expired_at TEXT,
             client_ip TEXT,
@@ -103,10 +174,10 @@ function initDatabase() {
             ticket_code TEXT NOT NULL UNIQUE,
             order_id INTEGER NOT NULL,
             order_no TEXT NOT NULL,
-            ticket_type_code TEXT NOT NULL,
+            ticket_type_code TEXT,
             ticket_name TEXT NOT NULL,
-            visitor_name TEXT NOT NULL,
-            visitor_phone TEXT NOT NULL,
+            visitor_name TEXT,
+            visitor_phone TEXT,
             ticket_status TEXT DEFAULT 'ACTIVE',
             qr_code_data TEXT NOT NULL,
             check_status TEXT DEFAULT 'UNCHECKED',

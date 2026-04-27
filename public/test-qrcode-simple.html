@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .qrcode-container {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+        }
+        #qrcode {
+            width: 200px;
+            height: 200px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e7f3ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>二维码生成测试</h1>
+
+        <div class="info">
+            <p><strong>测试Token:</strong> eyJ0eXBlIjoiaW52aXRhdGlvbiIsInRpY2tldE5vIjoiVEsyMDI2MDQyNU9BTjNKNyIsInVzZXJJZCI6IjEzNzc3Nzc3Nzc3IiwidGltZXN0YW1wIjoxNzc3MDg4Nzc2MDUzfQ==</p>
+        </div>
+
+        <button onclick="generateQRCode()">生成二维码</button>
+        <button onclick="clearQRCode()">清除二维码</button>
+
+        <h3>二维码显示区域：</h3>
+        <div class="qrcode-container">
+            <div id="qrcode"></div>
+        </div>
+
+        <div class="info">
+            <p><strong>状态：</strong> <span id="status">等待生成...</span></p>
+        </div>
+    </div>
+
+    <script>
+        function generateQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            const status = document.getElementById('status');
+
+            // 清除之前的二维码
+            qrContainer.innerHTML = '';
+
+            try {
+                // 测试QRCode库是否可用
+                if (typeof QRCode === 'undefined') {
+                    status.innerHTML = '<span style="color: red;">错误：QRCode库未加载</span>';
+                    return;
+                }
+
+                const testToken = 'eyJ0eXBlIjoiaW52aXRhdGlvbiIsInRpY2tldE5vIjoiVEsyMDI2MDQyNU9BTjNKNyIsInVzZXJJZCI6IjEzNzc3Nzc3Nzc3IiwidGltZXN0YW1wIjoxNzc3MDg4Nzc2MDUzfQ==';
+
+                // 生成二维码 - 使用新API
+                QRCode.toCanvas(testToken, {
+                    width: 200,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                }, function(error, canvas) {
+                    if (error) {
+                        status.innerHTML = '<span style="color: red;">错误：' + error.message + '</span>';
+                        console.error('生成二维码失败:', error);
+                        return;
+                    }
+
+                    canvas.style.display = 'block';
+                    canvas.style.margin = '0 auto';
+                    qrContainer.appendChild(canvas);
+
+                    status.innerHTML = '<span style="color: green;">二维码生成成功！</span>';
+                    console.log('二维码已生成到canvas元素');
+                });
+
+            } catch (error) {
+                status.innerHTML = '<span style="color: red;">错误：' + error.message + '</span>';
+                console.error('生成二维码失败:', error);
+            }
+        }
+
+        function clearQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            const status = document.getElementById('status');
+            qrContainer.innerHTML = '';
+            status.innerHTML = '二维码已清除';
+        }
+
+        // 页面加载时显示库状态
+        window.addEventListener('load', () => {
+            const status = document.getElementById('status');
+            if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
+                status.innerHTML = '<span style="color: green;">QRCode库已加载，准备就绪</span>';
+                // 自动生成测试二维码
+                setTimeout(() => generateQRCode(), 500);
+            } else {
+                status.innerHTML = '<span style="color: red;">QRCode库未加载或版本不兼容</span>';
+            }
+        });
+    </script>
+</body>
+</html>

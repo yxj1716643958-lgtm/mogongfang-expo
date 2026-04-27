@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>管理后台 - 东北亚数字文创与模玩艺术博览会</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#131315",
+                        "surface": "#1a1a1c",
+                        "surface-container": "#201f21",
+                        "surface-variant": "#353437",
+                        "on-surface": "#e5e1e4",
+                        "on-surface-variant": "#bac9cc",
+                        "primary": "#c3f5ff",
+                        "primary-container": "#00e5ff",
+                        "on-primary-container": "#00363d",
+                        "secondary": "#ebb2ff",
+                        "tertiary": "#ffeac0",
+                        "tertiary-container": "#fec931",
+                        "error": "#ffb4ab",
+                        "success": "#a3e6a3",
+                        "outline": "#3b494c",
+                        "outline-variant": "#3b494c",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "Noto Sans SC", "sans-serif"],
+                        "body": ["Noto Sans SC", "sans-serif"],
+                        "label": ["Space Grotesk", "Noto Sans SC", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(32, 31, 33, 0.9) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-badge.status-pending {
+            background: rgba(255, 234, 192, 0.2);
+            color: #ffeac0;
+        }
+        .status-badge.status-approved {
+            background: rgba(163, 230, 163, 0.2);
+            color: #a3e6a3;
+        }
+        .status-badge.status-rejected {
+            background: rgba(255, 180, 171, 0.2);
+            color: #ffb4ab;
+        }
+        .anime-card {
+            position: relative;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        .anime-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 60px rgba(0, 229, 255, 0.25);
+        }
+        .holographic-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(0, 229, 255, 0.03) 50%, transparent 70%);
+            background-size: 200% 200%;
+            animation: holographic 3s ease infinite;
+            pointer-events: none;
+        }
+        @keyframes holographic {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .filter-btn.active {
+            background: #00e5ff;
+            color: #00363d;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen">
+    <!-- Header -->
+    <nav class="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl border-b border-primary/20 flex justify-between items-center px-6 h-16">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-secondary text-2xl">admin_panel_settings</span>
+            <span class="font-headline font-bold text-lg tracking-tighter">邀请函审核管理</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="verify.html" class="text-sm text-on-surface-variant hover:text-primary transition">现场核销</a>
+            <a href="index.html" class="text-sm text-on-surface-variant hover:text-primary transition">返回首页</a>
+        </div>
+    </nav>
+
+    <main class="pt-24 pb-12 px-6 max-w-7xl mx-auto">
+        <!-- 统计卡片 -->
+        <section class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center gap-4">
+                    <span class="material-symbols-outlined text-tertiary text-4xl">pending</span>
+                    <div>
+                        <p class="text-on-surface-variant text-sm">待审核</p>
+                        <p id="pendingCount" class="text-3xl font-headline font-bold text-tertiary">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center gap-4">
+                    <span class="material-symbols-outlined text-success text-4xl">check_circle</span>
+                    <div>
+                        <p class="text-on-surface-variant text-sm">已通过</p>
+                        <p id="approvedCount" class="text-3xl font-headline font-bold text-success">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center gap-4">
+                    <span class="material-symbols-outlined text-error text-4xl">cancel</span>
+                    <div>
+                        <p class="text-on-surface-variant text-sm">已拒绝</p>
+                        <p id="rejectedCount" class="text-3xl font-headline font-bold text-error">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center gap-4">
+                    <span class="material-symbols-outlined text-primary text-4xl">confirmation_number</span>
+                    <div>
+                        <p class="text-on-surface-variant text-sm">已发券</p>
+                        <p id="ticketCount" class="text-3xl font-headline font-bold text-primary">0</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 筛选区 -->
+        <section class="mb-6 flex gap-4 flex-wrap">
+            <button onclick="filterApplications('all')" class="filter-btn active px-6 py-2 rounded-full border border-outline-variant text-sm font-bold hover:border-primary transition" data-filter="all">
+                全部
+            </button>
+            <button onclick="filterApplications('PENDING')" class="filter-btn px-6 py-2 rounded-full border border-outline-variant text-sm font-bold hover:border-primary transition" data-filter="PENDING">
+                待审核
+            </button>
+            <button onclick="filterApplications('APPROVED')" class="filter-btn px-6 py-2 rounded-full border border-outline-variant text-sm font-bold hover:border-primary transition" data-filter="APPROVED">
+                已通过
+            </button>
+            <button onclick="filterApplications('REJECTED')" class="filter-btn px-6 py-2 rounded-full border border-outline-variant text-sm font-bold hover:border-primary transition" data-filter="REJECTED">
+                已拒绝
+            </button>
+        </section>
+
+        <!-- 申请列表 -->
+        <section id="applicationsList" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <p class="text-on-surface-variant text-center py-12 col-span-full">加载中...</p>
+        </section>
+    </main>
+
+    <!-- 审核弹窗 -->
+    <div id="reviewModal" class="fixed inset-0 z-50 hidden" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="anime-card p-6 w-full max-w-lg" style="position: relative; z-index: 1;">
+                <div class="holographic-effect"></div>
+                <div style="position: relative; z-index: 2;">
+                    <h3 class="font-headline text-xl font-bold mb-4 text-center text-primary">审核申请</h3>
+                    <div id="reviewContent" class="space-y-4 mb-6">
+                        <!-- 动态填充 -->
+                    </div>
+                    <div id="rejectReason" class="hidden mb-4">
+                        <label class="block text-sm font-bold mb-2">拒绝原因</label>
+                        <textarea id="rejectReasonText" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 focus:border-primary focus:outline-none" rows="3" placeholder="请输入拒绝原因"></textarea>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="closeReviewModal()" class="flex-1 border border-outline-variant py-3 rounded-lg hover:bg-surface transition">
+                            取消
+                        </button>
+                        <button onclick="submitReject()" id="rejectBtn" class="flex-1 bg-error/20 text-error py-3 rounded-lg hover:bg-error/30 transition font-bold">
+                            拒绝
+                        </button>
+                        <button onclick="submitApprove()" class="flex-1 bg-primary-container text-on-primary-container py-3 rounded-lg hover:brightness-110 transition font-bold">
+                            通过
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3001/api/v1'
+            : 'http://101.200.126.62/api/v1';
+
+        let allApplications = [];
+        let currentFilter = 'all';
+        let currentApplication = null;
+
+        // ==================== 初始化 ====================
+        window.addEventListener('load', () => {
+            loadApplications();
+            setInterval(loadApplications, 30000); // 每30秒刷新
+        });
+
+        // ==================== 加载数据 ====================
+        async function loadApplications() {
+            try {
+                const response = await fetch(`${API_BASE}/invitations/applications`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    allApplications = result.data.list || [];
+                    updateStats();
+                    renderApplications();
+                } else {
+                    console.error('加载失败:', result.message);
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+            }
+        }
+
+        function updateStats() {
+            const pending = allApplications.filter(a => a.audit_status === 'PENDING').length;
+            const approved = allApplications.filter(a => a.audit_status === 'APPROVED').length;
+            const rejected = allApplications.filter(a => a.audit_status === 'REJECTED').length;
+
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('rejectedCount').textContent = rejected;
+            document.getElementById('ticketCount').textContent = approved;
+        }
+
+        function filterApplications(status) {
+            currentFilter = status;
+
+            // 更新按钮状态
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-primary', 'text-on-primary-container', 'border-transparent');
+                if (btn.dataset.filter === status) {
+                    btn.classList.add('active', 'bg-primary', 'text-on-primary-container', 'border-transparent');
+                }
+            });
+
+            renderApplications();
+        }
+
+        function renderApplications() {
+            const container = document.getElementById('applicationsList');
+            let filtered = allApplications;
+
+            if (currentFilter !== 'all') {
+                filtered = allApplications.filter(a => a.audit_status === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-on-surface-variant text-center py-12 col-span-full">暂无数据</p>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(app => `
+                <div class="anime-card" style="position: relative;">
+                    <div class="holographic-effect"></div>
+                    <div style="position: relative; z-index: 1; padding: 24px;">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="font-headline text-lg font-bold">${app.applicant_name || '未知'}</h4>
+                                <p class="text-on-surface-variant text-sm">${app.application_no}</p>
+                            </div>
+                            <span class="status-badge status-${app.audit_status.toLowerCase()}">
+                                ${getStatusText(app.audit_status)}
+                            </span>
+                        </div>
+
+                        <div class="space-y-2 text-sm mb-4">
+                            <div class="flex justify-between">
+                                <span class="text-on-surface-variant">手机号</span>
+                                <span>${maskPhone(app.applicant_phone)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-on-surface-variant">公司</span>
+                                <span>${app.applicant_company || '--'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-on-surface-variant">类别</span>
+                                <span>${app.vip_category || '普通'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-on-surface-variant">申请时间</span>
+                                <span>${formatDate(app.created_at)}</span>
+                            </div>
+                            ${app.audit_status !== 'PENDING' ? `
+                            <div class="flex justify-between">
+                                <span class="text-on-surface-variant">审核时间</span>
+                                <span>${formatDate(app.audit_time)}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        ${app.audit_status === 'PENDING' ? `
+                        <div class="flex gap-2">
+                            <button onclick="openReviewModal('${app.id}')" class="flex-1 bg-primary-container text-on-primary-container py-2 rounded font-bold hover:brightness-110 transition">
+                                审核申请
+                            </button>
+                        </div>
+                        ` : app.audit_status === 'REJECTED' && app.audit_reason ? `
+                        <div class="p-3 bg-error/10 rounded text-sm text-error">
+                            拒绝原因：${app.audit_reason}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 审核功能 ====================
+        function openReviewModal(appId) {
+            currentApplication = allApplications.find(a => a.id === appId);
+            if (!currentApplication) return;
+
+            document.getElementById('reviewContent').innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between py-2 border-b border-outline-variant">
+                        <span class="text-on-surface-variant">申请人</span>
+                        <span class="font-bold">${currentApplication.applicant_name}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-outline-variant">
+                        <span class="text-on-surface-variant">手机号</span>
+                        <span class="font-bold">${maskPhone(currentApplication.applicant_phone)}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-outline-variant">
+                        <span class="text-on-surface-variant">公司</span>
+                        <span class="font-bold">${currentApplication.applicant_company || '--'}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-outline-variant">
+                        <span class="text-on-surface-variant">身份证</span>
+                        <span class="font-bold">${maskIdCard(currentApplication.applicant_id_card)}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-outline-variant">
+                        <span class="text-on-surface-variant">类别</span>
+                        <span class="font-bold">${currentApplication.vip_category || '普通'}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('reviewModal').classList.remove('hidden');
+            document.getElementById('rejectReason').classList.add('hidden');
+            document.getElementById('rejectReasonText').value = '';
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+            currentApplication = null;
+        }
+
+        document.getElementById('rejectBtn')?.addEventListener('mouseenter', () => {
+            document.getElementById('rejectReason').classList.remove('hidden');
+        });
+
+        async function submitApprove() {
+            if (!currentApplication) return;
+
+            if (!confirm(`确认通过 ${currentApplication.applicant_name} 的申请？`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/invitations/${currentApplication.id}/approve`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    alert('审核通过！');
+                    closeReviewModal();
+                    loadApplications();
+                } else {
+                    alert('操作失败：' + result.message);
+                }
+            } catch (error) {
+                console.error('审核失败:', error);
+                alert('网络错误，请重试');
+            }
+        }
+
+        async function submitReject() {
+            if (!currentApplication) return;
+
+            const reason = document.getElementById('rejectReasonText').value.trim();
+            if (!reason) {
+                alert('请输入拒绝原因');
+                return;
+            }
+
+            if (!confirm(`确认拒绝 ${currentApplication.applicant_name} 的申请？`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/invitations/${currentApplication.id}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    alert('已拒绝申请');
+                    closeReviewModal();
+                    loadApplications();
+                } else {
+                    alert('操作失败：' + result.message);
+                }
+            } catch (error) {
+                console.error('审核失败:', error);
+                alert('网络错误，请重试');
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function getStatusText(status) {
+            const texts = {
+                'PENDING': '待审核',
+                'APPROVED': '已通过',
+                'REJECTED': '已拒绝'
+            };
+            return texts[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function maskPhone(phone) {
+            if (!phone || phone.length < 11) return phone;
+            return phone.substring(0, 3) + '****' + phone.substring(7);
+        }
+
+        function maskIdCard(idCard) {
+            if (!idCard || idCard.length < 10) return idCard;
+            return idCard.substring(0, 6) + '********' + idCard.substring(idCard.length - 4);
+        }
+    </script>
+</body>
+</html>

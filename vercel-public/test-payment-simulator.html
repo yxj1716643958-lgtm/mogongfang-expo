@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付模拟器 - 测试工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .terminal {
+            background: #1a1a2e;
+            font-family: 'Courier New', monospace;
+        }
+        .terminal-text {
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center">🧪 汇付支付模拟器</h1>
+
+        <div class="max-w-2xl mx-auto">
+            <!-- 订单信息 -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">📦 订单信息</h2>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">订单号:</span>
+                        <input type="text" id="orderNo" value="NE17766546928425049"
+                            class="bg-gray-700 px-3 py-1 rounded text-right w-64">
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">票种:</span>
+                        <span>早鸟票</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">金额:</span>
+                        <span class="text-green-400 font-bold">¥39.90</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 支付模拟 -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">💳 支付模拟</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-400 mb-2">支付结果:</label>
+                        <select id="paymentStatus" class="w-full bg-gray-700 rounded px-4 py-2">
+                            <option value="success">✅ 支付成功</option>
+                            <option value="failed">❌ 支付失败</option>
+                            <option value="pending">⏳ 支付处理中</option>
+                        </select>
+                    </div>
+                    <button onclick="simulatePayment()"
+                        class="w-full bg-green-600 hover:bg-green-700 py-3 rounded font-bold transition">
+                        🚀 发送支付回调
+                    </button>
+                </div>
+            </div>
+
+            <!-- 终端输出 -->
+            <div class="terminal rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4 text-green-400">📡 回调日志</h2>
+                <div id="console" class="terminal-text text-sm space-y-1 max-h-96 overflow-y-auto">
+                    <div>> 等待操作...</div>
+                </div>
+            </div>
+
+            <!-- 快捷操作 -->
+            <div class="bg-gray-800 rounded-lg p-6 mt-6">
+                <h2 class="text-xl font-bold mb-4">⚡ 快捷操作</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="quickTest('success')"
+                        class="bg-green-600 hover:bg-green-700 py-2 rounded transition">
+                        测试支付成功
+                    </button>
+                    <button onclick="checkOrderStatus()"
+                        class="bg-blue-600 hover:bg-blue-700 py-2 rounded transition">
+                        查询订单状态
+                    </button>
+                    <button onclick="viewMyTickets()"
+                        class="bg-purple-600 hover:bg-purple-700 py-2 rounded transition">
+                        查看我的门票
+                    </button>
+                    <button onclick="clearConsole()"
+                        class="bg-gray-600 hover:bg-gray-700 py-2 rounded transition">
+                        清空日志
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/v1';
+        const TICKET_PAGE = 'http://localhost:8080';
+
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const time = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-green-400',
+                error: 'text-red-400',
+                warn: 'text-yellow-400',
+                success: 'text-blue-400'
+            };
+            console.innerHTML += `<div class="${colors[type]}">[${time}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        async function simulatePayment() {
+            const orderNo = document.getElementById('orderNo').value;
+            const status = document.getElementById('paymentStatus').value;
+
+            if (!orderNo) {
+                log('❌ 请输入订单号', 'error');
+                return;
+            }
+
+            log(`📤 开始模拟支付回调...`, 'info');
+            log(`   订单号: ${orderNo}`, 'info');
+            log(`   支付状态: ${status}`, 'info');
+
+            try {
+                // 使用简化的测试回调接口
+                const response = await fetch(`${API_BASE}/payments/notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderNo: orderNo,
+                        status: status,
+                        amount: '3990',
+                        transactionId: 'TEST_' + Date.now()
+                    })
+                });
+
+                const result = await response.json();
+                log(`📥 服务器响应: ${result.message}`, 'success');
+
+                if (result.code === 'SUCCESS') {
+                    log('✅ 支付回调处理成功！', 'success');
+                    log('💡 提示：点击"查看我的门票"查看票券', 'info');
+                    setTimeout(() => checkOrderStatus(), 500);
+                } else {
+                    log(`❌ 支付回调处理失败: ${result.message}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function quickTest(status) {
+            document.getElementById('paymentStatus').value = status;
+            await simulatePayment();
+        }
+
+        async function checkOrderStatus() {
+            const orderNo = document.getElementById('orderNo').value;
+            if (!orderNo) {
+                log('❌ 请输入订单号', 'error');
+                return;
+            }
+
+            log(`📊 查询订单状态: ${orderNo}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderNo}`);
+                const result = await response.json();
+
+                if (result.code === 'SUCCESS') {
+                    const order = result.data;
+                    log(`✅ 订单状态: ${order.order_status}`, 'success');
+                    log(`   支付状态: ${order.payment_status}`, 'info');
+                    log(`   订单金额: ¥${order.total_amount}`, 'info');
+                    log(`   支付时间: ${order.payment_time || '未支付'}`, 'info');
+                    log(`   交易单号: ${order.trade_no || '无'}`, 'info');
+                } else {
+                    log(`❌ 查询失败: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        function viewMyTickets() {
+            window.open(`${TICKET_PAGE}/my-tickets.html`, '_blank');
+            log('🎫 打开我的门票页面', 'info');
+        }
+
+        function createNewOrder() {
+            window.open(`${TICKET_PAGE}/tickets.html`, '_blank');
+            log('🎟️ 打开购票页面', 'info');
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '<div>> 日志已清空</div>';
+        }
+
+        // 页面加载时查询订单状态
+        window.addEventListener('load', () => {
+            log('🚀 支付模拟器已启动', 'success');
+            log('💡 使用说明:', 'info');
+            log('   1. 输入订单号（或使用默认值）', 'info');
+            log('   2. 选择支付结果', 'info');
+            log('   3. 点击"发送支付回调"', 'info');
+            log('   4. 查看订单状态或我的门票', 'info');
+            log('', 'info');
+
+            // 自动检查默认订单状态
+            checkOrderStatus();
+        });
+    </script>
+</body>
+</html>

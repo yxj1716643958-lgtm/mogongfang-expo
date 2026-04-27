@@ -33,3 +33,4 @@ Thumbs.db
 
 # Temporary files
 reinit-db.js
+deploy_helper.py

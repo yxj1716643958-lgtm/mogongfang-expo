@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>直接二维码测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .ticket-card {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .qrcode-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            display: inline-block;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #log {
+            text-align: left;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>直接二维码测试</h1>
+
+    <button onclick="test1()">方法1: QRCode.toCanvas</button>
+    <button onclick="test2()">方法2: QRCode.js</button>
+    <button onclick="test3()">方法3: 直接操作DOM</button>
+
+    <div id="result" style="margin-top: 20px;">
+        <div class="ticket-card">
+            <h3>邀请函票</h3>
+            <p>票号：TK202604255Q57DU</p>
+            <p>姓名：箫箫</p>
+            <p>手机：18730880262</p>
+            <div id="qrcode-container" class="qrcode-box">
+                等待生成二维码...
+            </div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+
+    <!-- 本地QRCode库 -->
+    <script src="assets/js/qrcode.min.js"></script>
+    <script src="assets/js/qrcodejs.min.js"></script>
+
+    <script>
+        const qrData = "eyJ0eXBlIjoiaW52aXRhdGlvbiIsInRpY2tldE5vIjoiVEsyMDI2MDQyNTVRNTdFNSIsInVzZXJJZCI6IjE4NzMwODgwMjYyIiwidGltZXN0YW1wIjoxNzc3MDg4Nzc1ODcwfQ==";
+
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML = '[' + time + '] ' + msg + '<br>' + logDiv.innerHTML;
+        }
+
+        function test1() {
+            log('测试1: 使用QRCode.toCanvas');
+            log('QRCode类型: ' + typeof QRCode);
+
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '<canvas id="qr-canvas"></canvas>';
+
+            const canvas = document.getElementById('qr-canvas');
+            if (!canvas) {
+                log('错误: canvas未创建');
+                return;
+            }
+
+            if (typeof QRCode === 'undefined') {
+                log('错误: QRCode库未加载');
+                return;
+            }
+
+            if (typeof QRCode.toCanvas === 'function') {
+                QRCode.toCanvas(canvas, qrData, {
+                    width: 200,
+                    margin: 2
+                }, function(error) {
+                    if (error) {
+                        log('失败: ' + error.message);
+                    } else {
+                        log('成功: 二维码已生成');
+                    }
+                });
+            } else {
+                log('错误: QRCode.toCanvas不存在');
+            }
+        }
+
+        function test2() {
+            log('测试2: 使用QRCode.js');
+
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+
+            if (typeof QRCode === 'undefined') {
+                log('错误: QRCode库未加载');
+                return;
+            }
+
+            try {
+                new QRCode(container, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                log('成功: 二维码已生成（QRCode.js）');
+            } catch (e) {
+                log('失败: ' + e.message);
+            }
+        }
+
+        function test3() {
+            log('测试3: 直接操作DOM');
+            log('QRCode类型: ' + typeof QRCode);
+
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+
+            if (typeof QRCode !== 'undefined' && typeof QRCode === 'function') {
+                try {
+                    new QRCode(container, {
+                        text: qrData,
+                        width: 200,
+                        height: 200
+                    });
+                    log('成功: 二维码已生成');
+                } catch (e) {
+                    log('失败: ' + e.message);
+                }
+            } else {
+                log('错误: QRCode不是函数，类型是: ' + typeof QRCode);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            log('页面已加载');
+            log('QRCode库状态: ' + (typeof QRCode !== 'undefined' ? '已加载' : '未加载'));
+
+            if (typeof QRCode !== 'undefined') {
+                log('QRCode.toCanvas: ' + (typeof QRCode.toCanvas === 'function' ? '存在' : '不存在'));
+                log('QRCode是函数: ' + (typeof QRCode === 'function' ? '是' : '否'));
+            }
+
+            // 自动测试
+            setTimeout(() => {
+                log('自动执行测试2...');
+                test2();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

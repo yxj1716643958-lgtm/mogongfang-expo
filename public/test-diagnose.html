@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>功能诊断</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>body{padding:20px;font-family:sans-serif;}</style>
+</head>
+<body class="bg-gray-900 text-white">
+    <h1>功能诊断</h1>
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/v1';
+
+        const tests = [
+            { name: '健康检查', url: `${API_BASE.replace('/api/v1', '')}/health` },
+            { name: '核销记录', url: `${API_BASE}/verify/records?page=1&page_size=5` },
+            { name: '核销预览(测试)', url: `${API_BASE}/verify/preview`, method: 'POST', body: { qrContent: 'test123' } },
+        ];
+
+        async function runTests() {
+            const results = document.getElementById('results');
+            let html = '<h2>测试结果：</h2>';
+
+            for (const test of tests) {
+                try {
+                    const options = {
+                        method: test.method || 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    if (test.body) {
+                        options.body = JSON.stringify(test.body);
+                    }
+
+                    const response = await fetch(test.url, options);
+                    const text = await response.text();
+
+                    const success = response.ok || text.includes('SUCCESS');
+                    html += `<p>${success ? '✅' : '❌'} ${test.name}: ${response.status} - ${text.substring(0, 100)}</p>`;
+                } catch (error) {
+                    html += `<p>❌ ${test.name}: ${error.message}</p>`;
+                }
+            }
+
+            html += '<hr><h2>浏览器信息：</h2>';
+            html += `<p>hostname: ${window.location.hostname}</p>`;
+            html += `<p>href: ${window.location.href}</p>`;
+
+            results.innerHTML = html;
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

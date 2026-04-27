@@ -67,6 +67,12 @@ class Connection {
         sql = sql.replace(/NOW\(\)/gi, "datetime('now')");
         sql = sql.replace(/CURRENT_TIMESTAMP/gi, "datetime('now')");
 
+        // 转换DATE函数
+        sql = sql.replace(/DATE\((\w+)\)/gi, "date($1)");
+
+        // 转换IFNULL
+        sql = sql.replace(/IFNULL\(([^,]+),\s*([^)]+)\)/gi, "COALESCE($1, $2)");
+
         // 转换字符集声明
         sql = sql.replace(/CHARACTER SET\s+\w+/gi, '');
         sql = sql.replace(/COLLATE\s+\w+/gi, '');

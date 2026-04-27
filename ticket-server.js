@@ -64,6 +64,70 @@ const TICKET_TYPES = {
 // ==================== 工具函数 ====================
 
 /**
+ * 身份证加密工具类
+ */
+class IdCardUtils {
+    static SECRET = process.env.ID_CARD_SECRET || 'expo-invitation-secret-2024';
+
+    /**
+     * 加密身份证号
+     */
+    static encrypt(idCard) {
+        if (!idCard) return null;
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.SECRET.padEnd(32).substring(0, 32)), iv);
+        let encrypted = cipher.update(idCard, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return iv.toString('hex') + ':' + encrypted;
+    }
+
+    /**
+     * 解密身份证号
+     */
+    static decrypt(encrypted) {
+        if (!encrypted) return null;
+        try {
+            const parts = encrypted.split(':');
+            const iv = Buffer.from(parts[0], 'hex');
+            const encryptedData = parts[1];
+            const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(this.SECRET.padEnd(32).substring(0, 32)), iv);
+            let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        } catch (e) {
+            console.error('身份证解密失败:', e);
+            return null;
+        }
+    }
+
+    /**
+     * 身份证哈希（用于验证唯一性）
+     */
+    static hash(idCard) {
+        if (!idCard) return null;
+        return crypto.createHash('sha256').update(idCard).digest('hex');
+    }
+
+    /**
+     * 身份证脱敏显示
+     */
+    static mask(idCard) {
+        if (!idCard || idCard.length !== 18) return idCard;
+        return idCard.substring(0, 6) + '********' + idCard.substring(14);
+    }
+
+    /**
+     * 验证身份证号格式
+     */
+    static validate(idCard) {
+        if (!idCard) return false;
+        // 18位身份证正则
+        const regex = /^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
+        return regex.test(idCard);
+    }
+}
+
+/**
  * 生成订单号
  */
 function generateOrderNo() {
@@ -124,6 +188,14 @@ function generateShortCode(ticketNo) {
 }
 
 /**
+ * 手机号脱敏
+ */
+function maskPhone(phone) {
+    if (!phone || phone.length !== 11) return phone;
+    return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+}
+
+/**
  * 标准响应
  */
 function successResponse(data, message = '成功') {
@@ -150,7 +222,7 @@ const HUIFU_CONFIG = {
     publicKey: process.env.HUIFU_PUBLIC_KEY || '',
     notifyUrl: process.env.HUIFU_NOTIFY_URL || 'http://localhost:3001/api/v1/payments/huifu/notify',
     returnUrl: process.env.HUIFU_RETURN_URL || 'http://localhost:8080/payment-result.html',
-    gatewayUrl: process.env.HUIFU_GATEWAY_URL || 'https://spin.cloudpnr.com',
+    gatewayUrl: process.env.HUIFU_GATEWAY_URL || 'https://paas.huifu.com',
     environment: process.env.HUIFU_ENVIRONMENT || 'PRODUCTION'
 };
 
@@ -182,11 +254,48 @@ class HuifuSignUtils {
      */
     static sign(data, privateKey) {
         try {
-            // 处理私钥格式
-            const formattedKey = this.formatPrivateKey(privateKey);
-            const sign = crypto.createSign('SHA256');
-            sign.update(data, 'utf8');
-            return sign.sign(formattedKey, 'base64');
+            console.log('[签名调试] 待签名数据长度:', data.length);
+            console.log('[签名调试] 私钥长度:', privateKey?.length);
+
+            // 尝试多种私钥格式
+            const formats = this.formatPrivateKey(privateKey);
+            console.log('[签名调试] 生成了', formats.length, '种密钥格式');
+
+            for (let i = 0; i < formats.length; i++) {
+                const format = formats[i];
+                console.log(`[签名调试] 尝试第${i+1}种格式`);
+
+                // 尝试多种签名方法（兼容Node.js 20+）
+                const methods = [
+                    // 方法1: crypto.sign with RSA_PKCS1_PADDING
+                    () => {
+                        const buffer = Buffer.from(data, 'utf8');
+                        return crypto.sign('sha256', buffer, {
+                            key: format,
+                            padding: crypto.constants.RSA_PKCS1_PADDING
+                        }).toString('base64');
+                    },
+                    // 方法2: 传统的createSign（回退方案）
+                    () => {
+                        const sign = crypto.createSign('SHA256');
+                        sign.update(data, 'utf8');
+                        return sign.sign(format, 'base64');
+                    }
+                ];
+
+                for (let j = 0; j < methods.length; j++) {
+                    try {
+                        const signature = methods[j]();
+                        console.log(`[签名] 使用方法${j+1}成功`);
+                        return signature;
+                    } catch (e) {
+                        console.log(`[签名] 方法${j+1}失败: ${e.message}`);
+                        continue;
+                    }
+                }
+            }
+
+            throw new Error('所有密钥格式均失败');
         } catch (error) {
             console.error('RSA签名失败:', error);
             throw new Error('签名失败');
@@ -202,10 +311,24 @@ class HuifuSignUtils {
      */
     static verify(data, publicKey, signature) {
         try {
-            const formattedKey = this.formatPublicKey(publicKey);
-            const verify = crypto.createVerify('SHA256');
-            verify.update(data, 'utf8');
-            return verify.verify(formattedKey, signature, 'base64');
+            const formats = this.formatPublicKey(publicKey);
+
+            for (const format of formats) {
+                try {
+                    const verify = crypto.createVerify('SHA256');
+                    verify.update(data, 'utf8');
+                    const result = verify.verify(format, signature, 'base64');
+                    if (result) {
+                        console.log('[验签] 公钥格式验证成功');
+                        return true;
+                    }
+                } catch (e) {
+                    console.log(`[验签] 尝试公钥格式失败: ${e.message}`);
+                    continue;
+                }
+            }
+
+            return false;
         } catch (error) {
             console.error('RSA验签失败:', error);
             return false;
@@ -213,31 +336,45 @@ class HuifuSignUtils {
     }
 
     /**
-     * 格式化私钥（添加PEM头尾）
+     * 格式化私钥（返回多种可能的格式）
      * @param {string} key - 私钥（可能不含PEM头尾）
-     * @returns {string} 格式化后的私钥
+     * @returns {string[]} 格式化后的私钥数组（尝试多种格式）
      */
     static formatPrivateKey(key) {
-        if (!key) return '';
+        if (!key) return [''];
         if (key.includes('-----BEGIN')) {
-            return key;
+            return [key];
         }
-        // Base64编码的密钥，添加PEM头尾
-        return `-----BEGIN PRIVATE KEY-----\n${key}\n-----END PRIVATE KEY-----`;
+        // Base64编码的密钥，每64字符换行
+        const cleanKey = key.replace(/\s/g, '');
+        const formattedKey = cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey;
+
+        // 返回多种格式：PKCS#8 和 PKCS#1
+        return [
+            `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`,
+            `-----BEGIN RSA PRIVATE KEY-----\n${formattedKey}\n-----END RSA PRIVATE KEY-----`
+        ];
     }
 
     /**
-     * 格式化公钥（添加PEM头尾）
+     * 格式化公钥（返回多种可能的格式）
      * @param {string} key - 公钥（可能不含PEM头尾）
-     * @returns {string} 格式化后的公钥
+     * @returns {string[]} 格式化后的公钥数组（尝试多种格式）
      */
     static formatPublicKey(key) {
-        if (!key) return '';
+        if (!key) return [''];
         if (key.includes('-----BEGIN')) {
-            return key;
+            return [key];
         }
-        // Base64编码的密钥，添加PEM头尾
-        return `-----BEGIN PUBLIC KEY-----\n${key}\n-----END PUBLIC KEY-----`;
+        // Base64编码的密钥，每64字符换行
+        const cleanKey = key.replace(/\s/g, '');
+        const formattedKey = cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey;
+
+        // 返回多种格式
+        return [
+            `-----BEGIN PUBLIC KEY-----\n${formattedKey}\n-----END PUBLIC KEY-----`,
+            `-----BEGIN RSA PUBLIC KEY-----\n${formattedKey}\n-----END RSA PUBLIC KEY-----`
+        ];
     }
 
     /**
@@ -259,7 +396,7 @@ class HuifuSignUtils {
 class HuifuHttpClient {
 
     /**
-     * 发送汇付API请求
+     * 发送汇付API请求（支持V1和V2格式）
      * @param {string} apiUrl - API路径
      * @param {Object} requestData - 请求数据
      * @param {string} method - HTTP方法
@@ -268,12 +405,17 @@ class HuifuHttpClient {
     static async request(apiUrl, requestData, method = 'POST') {
         try {
             // 序列化请求数据
+            console.log('[汇付请求] 开始序列化请求数据...');
             const dataStr = JSON.stringify(requestData);
+            console.log('[汇付请求] 序列化成功，长度:', dataStr.length);
+            console.log('[汇付请求] 序列化结果前200字符:', dataStr.substring(0, 200));
 
             // 生成签名
+            console.log('[汇付请求] 开始生成签名...');
             const sign = HuifuSignUtils.sign(dataStr, HUIFU_CONFIG.privateKey);
+            console.log('[汇付请求] 签名成功，长度:', sign.length);
 
-            // 构建完整请求体
+            // 构建完整请求体（V1和V2格式兼容）
             const requestBody = {
                 req_data: dataStr,
                 sign: sign
@@ -285,6 +427,11 @@ class HuifuHttpClient {
             console.log(`[汇付请求] ${method} ${url}`);
             console.log(`[汇付请求数据]`, JSON.stringify(requestData, null, 2));
 
+            // 设置超时控制
+            const AbortController = globalThis.AbortController || (await import('abort-controller')).default;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
+
             // 发送HTTPS请求
             const fetch = (await import('node-fetch')).default;
             const response = await fetch(url, {
@@ -294,8 +441,10 @@ class HuifuHttpClient {
                     'Accept': 'application/json'
                 },
                 body: method === 'POST' ? JSON.stringify(requestBody) : undefined,
-                timeout: 30000  // 30秒超时
+                signal: controller.signal
             });
+
+            clearTimeout(timeout);
 
             // 检查响应状态
             if (!response.ok) {
@@ -317,7 +466,7 @@ class HuifuHttpClient {
 
             console.log(`[汇付响应]`, JSON.stringify(result, null, 2));
 
-            // 验证响应签名
+            // 验证响应签名（支持V1格式）
             if (result.resp_data && result.sign) {
                 const isValid = HuifuSignUtils.verify(
                     result.resp_data,
@@ -332,13 +481,24 @@ class HuifuHttpClient {
                 console.log('[汇付响应] 签名验证通过');
             }
 
-            // 解析resp_data
+            // 解析响应数据（支持多种格式）
             if (result.resp_data) {
+                // V1格式：数据在resp_data字段中
                 try {
                     result.data = JSON.parse(result.resp_data);
                 } catch (e) {
                     console.error('解析resp_data失败:', e);
                 }
+            } else if (result.data && typeof result.data === 'string') {
+                // V2格式：data可能是JSON字符串
+                try {
+                    result.data = JSON.parse(result.data);
+                } catch (e) {
+                    // 保持原样
+                }
+            } else if (!result.data && result.resp_code) {
+                // V2格式：直接在根级别
+                result.data = result;
             }
 
             return result;
@@ -357,7 +517,7 @@ class HuifuHttpClient {
 class HuifuRequestBuilder {
 
     /**
-     * 构建H5支付下单请求
+     * 构建聚合正扫支付下单请求（斗拱平台V2 API）
      * @param {Object} params - 订单参数
      * @returns {Object} 包含url和requestData的对象
      */
@@ -367,7 +527,8 @@ class HuifuRequestBuilder {
             transAmt,          // 交易金额（分）
             goodsDesc = '门票', // 商品描述
             userInfo = {},     // 用户信息
-            clientIp = '127.0.0.1'
+            clientIp = '127.0.0.1',
+            paymentMethod = 'HUIFU_H5' // 支付方式
         } = params;
 
         const reqDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -375,37 +536,55 @@ class HuifuRequestBuilder {
 
         // 计算过期时间（30分钟后）
         const expireTime = new Date(Date.now() + 30 * 60 * 1000);
-        const timeExpire = expireTime.toISOString().slice(0, 19).replace(/[-T:]/g, '');
+        const expireTimeStr = expireTime.toISOString().slice(0, 19).replace('T', ' ');
 
-        // 构建请求数据（根据汇付天下H5支付接口规范）
+        // 确定预下单类型
+        // 1: H5支付、PC支付
+        // 2: 支付宝小程序
+        // 3: 微信小程序
+        let preOrderType = '1'; // 默认H5支付
+        let acctSplitBunch = '';
+
+        // 根据支付方式设置预下单类型
+        if (paymentMethod === 'WECHAT_MINIAPP') {
+            preOrderType = '3'; // 微信小程序
+            if (params.wxAppid && params.wxOpenid) {
+                acctSplitBunch = JSON.stringify({
+                    sub_appid: params.wxAppid,
+                    sub_openid: params.wxOpenid
+                });
+            }
+        } else if (paymentMethod === 'ALIPAY_MINIAPP') {
+            preOrderType = '2'; // 支付宝小程序
+        }
+
+        // 构建请求数据（斗拱平台托管收银台预下单接口）
         const requestData = {
             req_seq_id: reqSeqId,
             req_date: reqDate,
             huifu_id: HUIFU_CONFIG.merchantId,
-            sys_id: HUIFU_CONFIG.sysId,
-            product_id: HUIFU_CONFIG.appId,
-            mer_ord_id: orderNo,
+            pre_order_type: preOrderType,
             trans_amt: transAmt.toString(),
             goods_desc: goodsDesc,
-            time_expire: timeExpire,
-            client_ip: clientIp,
+            mer_ord_id: orderNo,
+            time_expire: expireTimeStr,
             notify_url: HUIFU_CONFIG.notifyUrl,
-            bg_url: HUIFU_CONFIG.returnUrl
-        };
-
-        // 添加用户信息（如果有）
-        if (userInfo && (userInfo.name || userInfo.phone)) {
-            requestData.risk_check_data = {
+            risk_check_data: JSON.stringify({
                 user_info: {
                     user_name: userInfo.name || '',
                     user_mobile: userInfo.phone || '',
                     user_email: userInfo.email || ''
                 }
-            };
+            })
+        };
+
+        // 添加微信小程序等额外数据
+        if (acctSplitBunch) {
+            requestData.acct_split_bunch = acctSplitBunch;
         }
 
         return {
-            url: '/gateway/api/rest/api/transaction/h5pay',
+            url: '/v2/trade/hosting/payment/preorder',
             requestData,
             reqSeqId,
             reqDate
@@ -431,9 +610,44 @@ class HuifuRequestBuilder {
 }
 
 // ==================== 中间件 ====================
+// 静态文件服务
+app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+
+// CORS 配置 - 允许 Vercel 和本地开发
+const allowedOrigins = [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'http://101.200.126.62:8080',
+    'https://www.uka-hc.com',
+    'https://uka-hc.com'
+];
+
+app.use(cors({
+    origin: function(origin, callback) {
+        // 允许没有 origin 的请求（如移动应用、Postman等）
+        if (!origin) return callback(null, true);
+
+        // 开发环境允许所有本地请求
+        if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return callback(null, true);
+        }
+
+        // 生产环境检查白名单
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // 暂时允许所有源（方便测试）
+            // 生产环境应该取消注释下面这行
+            // callback(new Error('CORS not allowed'));
+            callback(null, true);
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // 请求日志
 app.use((req, res, next) => {
@@ -447,10 +661,18 @@ app.use((req, res, next) => {
  * 健康检查
  */
 app.get('/health', (req, res) => {
-    res.json(successResponse({
+    const huifuConfigured = validateHuifuConfig();
+    const config = {
         status: 'ok',
-        timestamp: new Date().toISOString()
-    }, '服务运行正常'));
+        timestamp: new Date().toISOString(),
+        database: 'SQLite',
+        huifu: huifuConfigured ? 'configured' : 'not_configured',
+        huifuGateway: HUIFU_CONFIG.gatewayUrl,
+        huifuEnvironment: HUIFU_CONFIG.environment,
+        paymentDebugMode: process.env.PAYMENT_DEBUG_MODE === 'true'
+    };
+
+    res.json(successResponse(config, '服务运行正常'));
 });
 
 // ==================== 订单模块 ====================
@@ -613,10 +835,16 @@ app.post('/api/v1/orders/:orderNo/cancel', async (req, res) => {
  * 创建汇付H5支付订单
  */
 app.post('/api/v1/payments/huifu/create', async (req, res) => {
-    const connection = await pool.getConnection();
-
+    console.log('[支付创建] 请求收到:', JSON.stringify(req.body));
+    let connection;
     try {
+        console.log('[支付创建] 获取数据库连接...');
+        connection = await pool.getConnection();
+        console.log('[支付创建] 数据库连接成功');
+
+        console.log('[支付创建] 开始事务...');
         await connection.beginTransaction();
+        console.log('[支付创建] 事务开始成功');
 
         const { orderNo, paymentMethod = 'HUIFU_H5', returnUrl } = req.body;
 
@@ -650,11 +878,11 @@ app.post('/api/v1/payments/huifu/create', async (req, res) => {
                 `UPDATE orders SET
                     order_status = 'PAID',
                     payment_status = 'PAID',
-                    paid_amount = total_amount,
-                    transaction_id = 'DEBUG_' + Date.now(),
-                    paid_at = NOW()
+                    paid_amount = ?,
+                    transaction_id = ?,
+                    paid_at = datetime('now')
                 WHERE id = ?`,
-                [order.id]
+                [order.total_amount, 'DEBUG_' + Date.now(), order.id]
             );
 
             // 出票
@@ -751,8 +979,14 @@ app.post('/api/v1/payments/huifu/create', async (req, res) => {
             orderRequest.requestData
         );
 
-        // 7. 处理汇付响应
-        if (huifuResult.data && huifuResult.data.resp_code === '00000000') {
+        // 7. 处理汇付响应（支持V1和V2格式）
+        const isSuccess = huifuResult.data && (
+            huifuResult.data.resp_code === '00000000' ||  // V1格式
+            huifuResult.data.resp_code === '0000' ||      // V2格式
+            huifuResult.data.code === '0000'              // 其他V2变体
+        );
+
+        if (isSuccess) {
             // 下单成功，保存支付记录
             await connection.query(
                 `INSERT INTO payment_records (
@@ -771,7 +1005,7 @@ app.post('/api/v1/payments/huifu/create', async (req, res) => {
                     order.total_amount,
                     order.total_amount,
                     'PENDING',
-                    huifuResult.data.hf_seq_id || '',
+                    huifuResult.data.hf_seq_id || huifuResult.data.seq_id || orderRequest.reqSeqId,
                     JSON.stringify(huifuResult.data),
                     req.ip || null
                 ]
@@ -779,24 +1013,44 @@ app.post('/api/v1/payments/huifu/create', async (req, res) => {
 
             await connection.commit();
 
-            // 返回支付URL
+            // 返回支付URL（支持多种可能的字段名）
+            const paymentUrl = huifuResult.data.pay_url ||
+                              huifuResult.data.url ||
+                              huifuResult.data.payment_url ||
+                              huifuResult.data.cashier_url;
+
+            if (!paymentUrl) {
+                console.error('[支付创建] 响应中没有找到支付URL:', JSON.stringify(huifuResult.data));
+                throw new Error('汇付响应未返回支付URL');
+            }
+
             res.json(successResponse({
                 paymentId: orderRequest.reqSeqId,
                 orderNo: orderNo,
-                paymentUrl: huifuResult.data.pay_url || huifuResult.data.pay_url,
+                paymentUrl: paymentUrl,
                 expiredAt: order.expired_at
             }, '支付订单创建成功'));
 
         } else {
-            throw new Error(huifuResult.data?.resp_desc || '汇付下单失败');
+            const errorMsg = huifuResult.data?.resp_desc ||
+                           huifuResult.data?.resp_msg ||
+                           huifuResult.data?.message ||
+                           '汇付下单失败';
+            throw new Error(errorMsg);
         }
 
     } catch (error) {
-        await connection.rollback();
-        console.error('创建汇付支付失败:', error);
+        console.error('[支付创建] 错误详情:', error);
+        console.error('[支付创建] 错误堆栈:', error.stack);
+        console.error('[支付创建] 错误消息:', error.message);
+        if (connection) {
+            await connection.rollback();
+        }
         res.status(400).json(errorResponse(error.message || '创建支付失败'));
     } finally {
-        connection.release();
+        if (connection) {
+            connection.release();
+        }
     }
 });
 
@@ -910,11 +1164,25 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. 获取回调参数
-        const { resp_data, sign } = req.body;
+        // 1. 获取回调参数（支持V1和V2格式）
+        let respData = req.body.resp_data;
+        let sign = req.body.sign;
 
-        if (!resp_data || !sign) {
+        // V2格式：数据可能直接在body中
+        if (!respData && !sign) {
+            // 尝试V2格式处理
+            const v2Data = req.body.data || req.body;
+            if (typeof v2Data === 'string') {
+                respData = v2Data;
+            } else {
+                respData = JSON.stringify(v2Data);
+            }
+            sign = req.body.sign || req.body.signature;
+        }
+
+        if (!respData || !sign) {
             console.error('[汇付回调] 参数缺失');
+            console.error('[汇付回调] 请求体:', JSON.stringify(req.body));
             return res.status(400).send('Bad Request');
         }
 
@@ -922,7 +1190,7 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
 
         // 2. 验证签名（关键安全措施）
         const isValid = HuifuSignUtils.verify(
-            resp_data,
+            respData,
             HUIFU_CONFIG.publicKey,
             sign
         );
@@ -934,18 +1202,22 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
 
         console.log('[汇付回调] 签名验证通过');
 
-        // 3. 解析回调数据
-        const callbackData = JSON.parse(resp_data);
+        // 3. 解析回调数据（支持JSON字符串和已解析的对象）
+        let callbackData;
+        if (typeof respData === 'string') {
+            callbackData = JSON.parse(respData);
+        } else {
+            callbackData = respData;
+        }
 
-        const {
-            mer_ord_id: orderNo,
-            req_seq_id: reqSeqId,
-            trans_amt: transAmt,
-            trans_stat: transStat,
-            hf_seq_id: hfSeqId,
-            sub_resp_code: subRespCode,
-            sub_resp_desc: subRespDesc
-        } = callbackData;
+        // 支持多种可能的字段名（V1和V2格式兼容）
+        const orderNo = callbackData.mer_ord_id || callbackData.orderNo || callbackData.party_order_id;
+        const reqSeqId = callbackData.req_seq_id || callbackData.reqSeqId || callbackData.seq_id;
+        const transAmt = callbackData.trans_amt || callbackData.transAmt || callbackData.amount;
+        const transStat = callbackData.trans_stat || callbackData.transStat || callbackData.status;
+        const hfSeqId = callbackData.hf_seq_id || callbackData.hfSeqId || callbackData.seqId;
+        const subRespCode = callbackData.sub_resp_code || callbackData.subRespCode || callbackData.resp_code || callbackData.respCode;
+        const subRespDesc = callbackData.sub_resp_desc || callbackData.subRespDesc || callbackData.resp_desc || callbackData.respMsg || callbackData.message;
 
         console.log(`[汇付回调] 订单号=${orderNo}, 流水号=${reqSeqId}, 状态=${transStat}, 金额=${transAmt}`);
 
@@ -978,9 +1250,11 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
 
         console.log('[汇付回调] 金额校验通过');
 
-        // 7. 处理支付成功
-        if (subRespCode === '00000000' && transStat === 'S') {
+        // 7. 处理支付成功（支持多种成功码）
+        const isSuccess = (subRespCode === '00000000' || subRespCode === '0000') &&
+                         (transStat === 'S' || transStat === 'SUCCESS' || transStat === 'success');
 
+        if (isSuccess) {
             // 更新订单状态
             await connection.query(
                 `UPDATE orders SET
@@ -988,7 +1262,7 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
                     payment_status = 'PAID',
                     paid_amount = ?,
                     transaction_id = ?,
-                    paid_at = NOW()
+                    paid_at = datetime('now')
                 WHERE id = ?`,
                 [
                     parseFloat(transAmt) / 100,  // 转换为元
@@ -1003,7 +1277,7 @@ app.post('/api/v1/payments/huifu/notify', async (req, res) => {
                     payment_status = 'SUCCESS',
                     paid_amount = ?,
                     third_party_no = ?,
-                    payment_time = NOW()
+                    payment_time = datetime('now')
                 WHERE order_no = ? AND payment_status = 'PENDING'`,
                 [parseFloat(transAmt) / 100, hfSeqId, orderNo]
             );
@@ -1152,72 +1426,228 @@ app.post('/api/v1/payments/notify', async (req, res) => {
  * 提交邀请函申请
  */
 app.post('/api/v1/invitations/apply', async (req, res) => {
-    try {
-        const { ticketTypeId = 3, applicantInfo } = req.body;
+    const connection = await pool.getConnection();
 
-        if (!applicantInfo || !applicantInfo.name || !applicantInfo.phone) {
-            return res.status(400).json(errorResponse('申请信息不完整'));
+    try {
+        await connection.beginTransaction();
+
+        const { applicantInfo, smsCode } = req.body;
+
+        // 验证必填字段
+        if (!applicantInfo || !applicantInfo.name || !applicantInfo.phone || !applicantInfo.idCard) {
+            return res.status(400).json(errorResponse('请填写完整信息（姓名、手机、身份证）'));
         }
 
+        // 验证身份证格式
+        if (!IdCardUtils.validate(applicantInfo.idCard)) {
+            return res.status(400).json(errorResponse('身份证号格式不正确'));
+        }
+
+        // 验证短信验证码（实际项目中应调用短信服务验证）
+        // if (smsCode !== '123456') {
+        //     return res.status(400).json(errorResponse('验证码不正确'));
+        // }
+
         // 检查是否已有待审核申请
-        const [existingApps] = await pool.query(
+        const [existingApps] = await connection.query(
             `SELECT id FROM invitation_applications
              WHERE applicant_phone = ? AND audit_status = 'PENDING'`,
             [applicantInfo.phone]
         );
 
         if (existingApps.length > 0) {
+            await connection.rollback();
             return res.status(400).json(errorResponse('您已有待审核的申请，请勿重复提交'));
         }
 
-        // 检查是否已获得邀请函
-        const [existingTickets] = await pool.query(
-            `SELECT t.id FROM tickets t
-             INNER JOIN orders o ON t.order_id = o.id
-             WHERE t.user_phone = ? AND t.ticket_category = 'INVITATION' AND t.ticket_status = 'ACTIVE'`,
-            [applicantInfo.phone]
+        // 检查身份证是否已获得邀请函
+        const idCardHash = IdCardUtils.hash(applicantInfo.idCard);
+        const [existingTickets] = await connection.query(
+            `SELECT id FROM tickets WHERE id_card_hash = ? AND ticket_status = 'ACTIVE'`,
+            [idCardHash]
         );
 
         if (existingTickets.length > 0) {
-            return res.status(400).json(errorResponse('您已拥有有效的邀请函票'));
+            await connection.rollback();
+            return res.status(400).json(errorResponse('该身份证已获得邀请函'));
         }
 
-        const applicationNo = generateApplicationNo();
+        // 判断是否自动审核通过
+        const autoApprove = determineAutoApproval(applicantInfo);
 
-        const [result] = await pool.query(
+        const applicationNo = generateApplicationNo();
+        const encryptedIdCard = IdCardUtils.encrypt(applicantInfo.idCard);
+
+        // 插入申请记录
+        const [result] = await connection.query(
             `INSERT INTO invitation_applications (
-                application_no, applicant_name, applicant_phone, applicant_email,
-                applicant_company, applicant_position, apply_reason,
-                ticket_type_id, apply_quantity, audit_status, source_type,
-                client_ip, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                application_no, applicant_name, applicant_idcard, applicant_idcard_hash,
+                applicant_phone, applicant_email, applicant_company, applicant_position,
+                apply_reason, invite_code, category, ticket_type_id, apply_quantity,
+                audit_status, audit_by, audit_time, source_type, client_ip, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
             [
                 applicationNo,
                 applicantInfo.name,
+                encryptedIdCard,
+                idCardHash,
                 applicantInfo.phone,
                 applicantInfo.email || null,
                 applicantInfo.company || null,
                 applicantInfo.position || null,
                 applicantInfo.reason || null,
-                ticketTypeId,
+                applicantInfo.inviteCode || null,
+                applicantInfo.category || 'GENERAL',
+                3, // 邀请函票种ID
                 1,
-                'PENDING',
+                autoApprove ? 'APPROVED' : 'PENDING',
+                autoApprove ? 'SYSTEM' : null,
+                autoApprove ? new Date().toISOString() : null,
                 'WEB',
                 req.ip || null
             ]
         );
 
-        res.json(successResponse({
+        let responseData = {
             applicationId: result.insertId,
             applicationNo,
-            auditStatus: 'PENDING'
-        }, '申请提交成功'));
+            auditStatus: autoApprove ? 'APPROVED' : 'PENDING'
+        };
+
+        // 自动通过时直接发放票券
+        if (autoApprove) {
+            const ticket = await issueInvitationTicket(connection, {
+                applicationId: result.insertId,
+                applicationNo,
+                applicantInfo
+            });
+
+            responseData.ticket = {
+                ticketNo: ticket.ticket_no,
+                qrCodeToken: ticket.qr_code_token
+            };
+        }
+
+        await connection.commit();
+
+        const message = autoApprove ? '申请通过，票券已生成' : '申请提交成功，请等待审核';
+        res.json(successResponse(responseData, message));
 
     } catch (error) {
+        await connection.rollback();
         console.error('提交邀请函申请失败:', error);
         res.status(500).json(errorResponse('提交申请失败'));
+    } finally {
+        connection.release();
     }
 });
+
+/**
+ * 判断是否自动审核通过
+ */
+function determineAutoApproval(applicantInfo) {
+    // 有邀请码自动通过
+    if (applicantInfo.inviteCode && applicantInfo.inviteCode.length > 0) {
+        return true;
+    }
+
+    // 特定类别自动通过
+    const autoApproveCategories = ['VIP', 'EXHIBITOR', 'MEDIA', 'SPONSOR'];
+    if (applicantInfo.category && autoApproveCategories.includes(applicantInfo.category.toUpperCase())) {
+        return true;
+    }
+
+    // 默认需要人工审核
+    return false;
+}
+
+/**
+ * 发放邀请函票券
+ */
+async function issueInvitationTicket(connection, applicationData) {
+    const { applicationId, applicationNo, applicantInfo } = applicationData;
+
+    // 创建虚拟订单（邀请函无需支付）
+    const orderNo = generateOrderNo();
+    const [orderResult] = await connection.query(
+        `INSERT INTO orders (
+            order_no, user_name, user_phone, user_email, user_idcard,
+            order_type, total_amount, ticket_type_id, ticket_quantity,
+            ticket_info, order_status, payment_status, client_ip, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+            orderNo,
+            applicantInfo.name,
+            applicantInfo.phone,
+            applicantInfo.email || null,
+            IdCardUtils.mask(applicantInfo.idCard),
+            'INVITATION',
+            0, // 免费
+            3, // 邀请函票种ID
+            1,
+            JSON.stringify({
+                ticketCode: 'INVITATION',
+                ticketName: '邀请函票',
+                price: 0
+            }),
+            'COMPLETED',
+            'PAID',
+            null
+        ]
+    );
+
+    // 生成票号和二维码token
+    const ticketNo = generateTicketNo();
+    const qrCodeData = {
+        type: 'invitation',
+        ticketNo: ticketNo,
+        userId: applicantInfo.phone,
+        timestamp: Date.now()
+    };
+    const qrCodeToken = Buffer.from(JSON.stringify(qrCodeData)).toString('base64');
+
+    // 创建票券
+    const validStart = new Date();
+    const validEnd = new Date();
+    validEnd.setDate(validEnd.getDate() + 7); // 7天有效期
+
+    const [ticketResult] = await connection.query(
+        `INSERT INTO tickets (
+            ticket_no, order_id, ticket_type_id, ticket_type,
+            ticket_name, ticket_category, user_name, user_phone,
+            user_idcard, id_card, id_card_hash, qr_code_token,
+            qr_code_short, total_amount, valid_start_time, valid_end_time,
+            ticket_status, invite_code, application_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+            ticketNo,
+            orderResult.insertId,
+            3,
+            'INVITATION',
+            '邀请函票',
+            'INVITATION',
+            applicantInfo.name,
+            applicantInfo.phone,
+            IdCardUtils.mask(applicantInfo.idCard),
+            IdCardUtils.encrypt(applicantInfo.idCard),
+            IdCardUtils.hash(applicantInfo.idCard),
+            qrCodeToken,
+            generateShortCode(ticketNo),
+            0,
+            validStart.toISOString(),
+            validEnd.toISOString(),
+            'ACTIVE',
+            applicantInfo.inviteCode || null,
+            applicationId
+        ]
+    );
+
+    return {
+        id: ticketResult.insertId,
+        ticket_no: ticketNo,
+        qr_code_token: qrCodeToken
+    };
+}
 
 /**
  * 查询我的申请
@@ -1250,7 +1680,271 @@ app.get('/api/v1/invitations/my-applications', async (req, res) => {
     }
 });
 
+/**
+ * 查询我的邀请函票券
+ */
+app.get('/api/v1/invitations/my-tickets', async (req, res) => {
+    try {
+        const { phone } = req.query;
+
+        if (!phone) {
+            return res.status(400).json(errorResponse('手机号参数缺失'));
+        }
+
+        const [tickets] = await pool.query(
+            `SELECT ticket_no, ticket_name, ticket_category,
+                    user_name, user_phone, qr_code_token, qr_code_short,
+                    ticket_status, valid_start_time, valid_end_time,
+                    verified_at, verified_by, invite_code, created_at
+             FROM tickets
+             WHERE user_phone = ? AND ticket_category = 'INVITATION'
+             ORDER BY created_at DESC`,
+            [phone]
+        );
+
+        res.json(successResponse({
+            total: tickets.length,
+            tickets: tickets
+        }));
+
+    } catch (error) {
+        console.error('查询邀请函失败:', error);
+        res.status(500).json(errorResponse('查询邀请函失败'));
+    }
+});
+
 // ==================== 票券模块 ====================
+
+/**
+ * 获取票种列表
+ */
+app.get('/api/v1/tickets/types', async (req, res) => {
+    try {
+        const ticketTypes = await pool.query(
+            'SELECT * FROM ticket_types WHERE is_active = 1 ORDER BY sort_order, id'
+        );
+
+        // 格式化返回数据
+        const formattedTypes = ticketTypes[0].map(type => ({
+            id: type.id,
+            code: type.ticket_code,
+            name: type.ticket_name,
+            category: type.ticket_category,
+            originalPrice: type.original_price,
+            salePrice: type.sale_price,
+            benefits: type.benefits ? JSON.parse(type.benefits) : null,
+            description: type.description,
+            validStartTime: type.valid_start_time,
+            validEndTime: type.valid_end_time
+        }));
+
+        res.json(successResponse('获取票种列表成功', formattedTypes));
+    } catch (error) {
+        console.error('获取票种列表失败:', error);
+        res.status(500).json(errorResponse('获取票种列表失败'));
+    }
+});
+
+/**
+ * ==================== 管理后台API ====================
+ */
+
+/**
+ * 获取所有申请（支持状态筛选）
+ */
+app.get('/api/v1/invitations/applications', async (req, res) => {
+    try {
+        const { status } = req.query;
+        let query = `
+            SELECT ia.id, ia.application_no, ia.applicant_name as real_name,
+                   ia.applicant_phone as phone, ia.applicant_idcard as id_card,
+                   ia.applicant_company, ia.category as vip_category,
+                   ia.invite_code as invitation_code,
+                   ia.audit_status as status, ia.audit_reason as reject_reason,
+                   ia.created_at, ia.audit_time, t.ticket_no
+            FROM invitation_applications ia
+            LEFT JOIN tickets t ON ia.application_no = t.order_no
+        `;
+        const params = [];
+
+        if (status && status !== 'ALL') {
+            query += ' WHERE ia.audit_status = ?';
+            params.push(status);
+        }
+
+        query += ' ORDER BY ia.created_at DESC';
+
+        const [applications] = await pool.query(query, params);
+
+        // 解密身份证号用于显示
+        const list = applications.map(app => ({
+            ...app,
+            id_card: app.id_card ? IdCardUtils.mask(app.id_card) : null,
+            reason: app.audit_reason || null
+        }));
+
+        res.json(successResponse({
+            total: list.length,
+            list
+        }));
+
+    } catch (error) {
+        console.error('获取申请列表失败:', error);
+        res.status(500).json(errorResponse('获取申请列表失败'));
+    }
+});
+
+/**
+ * 同意邀请函申请
+ */
+app.post('/api/v1/invitations/:id/approve', async (req, res) => {
+    const connection = await pool;
+    try {
+        const { id } = req.params;
+
+        // 查询申请信息
+        const [applications] = await connection.query(
+            'SELECT * FROM invitation_applications WHERE id = ? FOR UPDATE',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json(errorResponse('申请不存在'));
+        }
+
+        const application = applications[0];
+
+        if (application.audit_status !== 'PENDING') {
+            return res.status(400).json(errorResponse('申请已处理'));
+        }
+
+        // 更新申请状态
+        await connection.query(
+            `UPDATE invitation_applications SET
+                audit_status = 'APPROVED',
+                audit_time = datetime('now'),
+                audit_by = 'ADMIN'
+            WHERE id = ?`,
+            [id]
+        );
+
+        // 生成邀请函票券
+        const ticketNo = generateTicketNo();
+        const qrCodeToken = generateQRCodeToken(ticketNo);
+
+        await connection.query(
+            `INSERT INTO tickets (
+                ticket_no, ticket_type_id, ticket_name, ticket_category,
+                order_id, order_no, user_id, user_name, user_phone,
+                qr_code_token, qr_code_short,
+                ticket_status, valid_start_time, valid_end_time,
+                invite_code, created_at
+            ) VALUES (?, 3, '邀请函票', 'INVITATION', NULL, ?, NULL, ?, ?, ?, ?, 'ACTIVE',
+              (SELECT value FROM system_config WHERE key = 'expo_start_date'),
+              (SELECT value FROM system_config WHERE key = 'expo_end_date'),
+              ?, datetime('now'))`,
+            [
+                ticketNo,
+                application.application_no,
+                application.applicant_name,
+                application.applicant_phone,
+                qrCodeToken,
+                qrCodeToken.substring(0, 8),
+                application.invitation_code || null
+            ]
+        );
+
+        // 更新申请表中的票号
+        await connection.query(
+            'UPDATE invitation_applications SET ticket_no = ? WHERE id = ?',
+            [ticketNo, id]
+        );
+
+        console.log(`[邀请函审核] 同意申请: ${id}, 生成票券: ${ticketNo}`);
+
+        res.json(successResponse({
+            ticketNo,
+            message: '申请已通过，票券已生成'
+        }, '审核成功'));
+
+    } catch (error) {
+        console.error('同意申请失败:', error);
+        res.status(500).json(errorResponse('同意申请失败'));
+    }
+});
+
+/**
+ * 拒绝邀请函申请
+ */
+app.post('/api/v1/invitations/:id/reject', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        const [applications] = await pool.query(
+            'SELECT * FROM invitation_applications WHERE id = ?',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json(errorResponse('申请不存在'));
+        }
+
+        const application = applications[0];
+
+        if (application.audit_status !== 'PENDING') {
+            return res.status(400).json(errorResponse('申请已处理'));
+        }
+
+        // 更新申请状态
+        await pool.query(
+            `UPDATE invitation_applications SET
+                audit_status = 'REJECTED',
+                audit_reason = ?,
+                audit_time = datetime('now'),
+                audit_by = 'ADMIN'
+            WHERE id = ?`,
+            [reason || '', id]
+        );
+
+        console.log(`[邀请函审核] 拒绝申请: ${id}, 理由: ${reason}`);
+
+        res.json(successResponse({ message: '申请已拒绝' }, '拒绝成功'));
+
+    } catch (error) {
+        console.error('拒绝申请失败:', error);
+        res.status(500).json(errorResponse('拒绝申请失败'));
+    }
+});
+
+/**
+ * 获取所有票券（管理后台用）
+ */
+app.get('/api/v1/tickets/all', async (req, res) => {
+    try {
+        const [tickets] = await pool.query(
+            `SELECT ticket_no, ticket_name, ticket_category,
+                    user_name, user_phone, ticket_status,
+                    valid_start_time, valid_end_time,
+                    verified_at, created_at
+             FROM tickets
+             ORDER BY created_at DESC`
+        );
+
+        res.json(successResponse({
+            total: tickets.length,
+            list: tickets
+        }));
+
+    } catch (error) {
+        console.error('获取所有票券失败:', error);
+        res.status(500).json(errorResponse('获取所有票券失败'));
+    }
+});
+
+/**
+ * ==================== 用户API ====================
+ */
 
 /**
  * 我的票券列表
@@ -1346,7 +2040,135 @@ app.get('/api/v1/tickets/:ticketNo', async (req, res) => {
     }
 });
 
+/**
+ * 按手机号搜索票券（核销用）
+ */
+app.get('/api/v1/tickets/search', async (req, res) => {
+    try {
+        const { mobile } = req.query;
+        console.log('[票券搜索] 收到请求，手机号:', mobile);
+
+        if (!mobile) {
+            return res.status(400).json(errorResponse('手机号参数缺失'));
+        }
+
+        // 验证手机号格式
+        if (!/^1[3-9]\d{9}$/.test(mobile)) {
+            return res.status(400).json(errorResponse('手机号格式不正确'));
+        }
+
+        console.log('[票券搜索] 手机号格式验证通过');
+
+        // 查询该手机号的有效票券（未使用且在有效期内）
+        const now = new Date().toISOString();
+        const [tickets] = await pool.query(
+            `SELECT ticket_no, ticket_name, ticket_category, user_name, user_phone,
+                    qr_code_token, valid_start_time, valid_end_time, ticket_status
+             FROM tickets
+             WHERE user_phone = ? AND ticket_status = 'ACTIVE'
+             AND valid_start_time <= ? AND valid_end_time >= ?
+             ORDER BY created_at DESC`,
+            [mobile, now, now]
+        );
+
+        // 转换数据格式
+        console.log('[票券搜索] 手机号:', mobile, '找到票券:', tickets.length);
+        const ticketList = tickets.map(ticket => ({
+            ticketNo: ticket.ticket_no,
+            ticketName: ticket.ticket_name,
+            ticketCategory: ticket.ticket_category,
+            userName: ticket.user_name,
+            userPhone: ticket.user_phone,
+            holderMobileLast4: maskPhone(ticket.user_phone),
+            qrContent: ticket.qr_code_token,
+            validStartTime: ticket.valid_start_time,
+            validEndTime: ticket.valid_end_time,
+            ticketStatus: ticket.ticket_status
+        }));
+
+        res.json(successResponse({
+            total: ticketList.length,
+            tickets: ticketList
+        }));
+
+    } catch (error) {
+        console.error('[票券搜索] 异常:', error);
+        res.status(500).json(errorResponse('搜索票券失败'));
+    }
+});
+
 // ==================== 核销模块 ====================
+
+/**
+ * 核销预览（显示票券信息，供核销员确认）
+ */
+app.post('/api/v1/verify/preview', async (req, res) => {
+    try {
+        const { qrContent, verifierInfo } = req.body;
+
+        if (!qrContent) {
+            return res.status(400).json(errorResponse('二维码内容不能为空'));
+        }
+
+        // 查询票券
+        const [tickets] = await pool.query(
+            'SELECT * FROM tickets WHERE qr_code_token = ?',
+            [qrContent]
+        );
+
+        if (tickets.length === 0) {
+            return res.status(404).json(errorResponse('票券不存在'));
+        }
+
+        const ticket = tickets[0];
+
+        // 检查票券状态
+        if (ticket.ticket_status !== 'ACTIVE') {
+            const statusText = {
+                'USED': '票券已使用',
+                'CANCELLED': '票券已作废',
+                'EXPIRED': '票券已过期'
+            }[ticket.ticket_status] || '票券无效';
+
+            return res.status(400).json(errorResponse(statusText));
+        }
+
+        // 检查有效期
+        const now = new Date();
+        const validStart = new Date(ticket.valid_start_time);
+        const validEnd = new Date(ticket.valid_end_time);
+
+        if (now < validStart || now > validEnd) {
+            return res.status(400).json(errorResponse('不在有效期内'));
+        }
+
+        // 返回票券信息（脱敏）
+        // 兼容不同列名：user_name/visitor_name, user_phone/visitor_phone
+        const holderName = ticket.user_name || ticket.visitor_name || null;
+        const holderPhone = ticket.user_phone || ticket.visitor_phone || null;
+        const holderIdCard = ticket.user_idcard || ticket.id_card || null;
+
+        const ticketInfo = {
+            ticketNo: ticket.ticket_no,
+            ticketName: ticket.ticket_name,
+            ticketCategory: ticket.ticket_category,
+            holderName: holderName,
+            holderPhone: holderPhone ? maskPhone(holderPhone) : null,
+            holderIdCard: holderIdCard, // 已脱敏
+            validStartTime: ticket.valid_start_time,
+            validEndTime: ticket.valid_end_time,
+            ticketStatus: ticket.ticket_status,
+            inviteCode: ticket.invite_code || null,
+            qrCodeToken: ticket.qr_code_token // 添加二维码token，用于后续核销
+        };
+
+        res.json(successResponse(ticketInfo, '预览成功'));
+
+    } catch (error) {
+        console.error('预览失败:', error);
+        res.status(500).json(errorResponse('预览失败'));
+    }
+});
 
 /**
  * 扫码核销
@@ -1372,10 +2194,10 @@ app.post('/api/v1/verify/scan', async (req, res) => {
         if (tickets.length === 0) {
             // 记录失败日志
             await connection.query(
-                `INSERT INTO verification_records (
-                    ticket_no, verify_type, verify_status, verifier_id,
-                    verifier_name, device_id, fail_reason, verify_time
-                ) VALUES (?, 'QR_CODE', 'FAILED', ?, ?, ?, '票券不存在', NOW())`,
+                `INSERT INTO verify_records (
+                    ticket_no, ticket_code, verify_result, verify_message,
+                    operator_id, operator_name, device_id, created_at
+                ) VALUES (?, ?, 'FAILED', '票券不存在', ?, ?, ?, datetime('now'))`,
                 [qrCodeToken.substring(0, 20), verifierInfo.verifierId, verifierInfo.verifierName || '']
             );
             await connection.commit();
@@ -1394,11 +2216,11 @@ app.post('/api/v1/verify/scan', async (req, res) => {
 
             // 记录失败日志
             await connection.query(
-                `INSERT INTO verification_records (
-                    ticket_id, ticket_no, order_id, verify_type, verify_status,
-                    verifier_id, verifier_name, device_id, fail_reason, verify_time
-                ) VALUES (?, ?, ?, 'QR_CODE', 'FAILED', ?, ?, ?, ?, NOW())`,
-                [ticket.id, ticket.ticket_no, ticket.order_id, verifierInfo.verifierId, verifierInfo.verifierName || '', verifierInfo.deviceId || '', statusText]
+                `INSERT INTO verify_records (
+                    ticket_id, ticket_no, ticket_code, verify_result, verify_message,
+                    operator_id, operator_name, device_id, created_at
+                ) VALUES (?, ?, ?, 'FAILED', ?, ?, ?, ?, datetime('now'))`,
+                [ticket.id, ticket.ticket_no, qrCodeToken.substring(0, 50), statusText, verifierInfo.verifierId, verifierInfo.verifierName || '', verifierInfo.deviceId || '']
             );
             await connection.commit();
             return res.status(400).json(errorResponse(statusText));
@@ -1411,11 +2233,11 @@ app.post('/api/v1/verify/scan', async (req, res) => {
 
         if (now < validStart || now > validEnd) {
             await connection.query(
-                `INSERT INTO verification_records (
-                    ticket_id, ticket_no, order_id, verify_type, verify_status,
-                    verifier_id, verifier_name, device_id, fail_reason, verify_time
-                ) VALUES (?, ?, ?, 'QR_CODE', 'FAILED', ?, ?, ?, '不在有效期内', NOW())`,
-                [ticket.id, ticket.ticket_no, ticket.order_id, verifierInfo.verifierId, verifierInfo.verifierName || '', verifierInfo.deviceId || '']
+                `INSERT INTO verify_records (
+                    ticket_id, ticket_no, ticket_code, verify_result, verify_message,
+                    operator_id, operator_name, device_id, created_at
+                ) VALUES (?, ?, ?, 'FAILED', '不在有效期内', ?, ?, ?, datetime('now'))`,
+                [ticket.id, ticket.ticket_no, qrCodeToken.substring(0, 50), verifierInfo.verifierId, verifierInfo.verifierName || '', verifierInfo.deviceId || '']
             );
             await connection.commit();
             return res.status(400).json(errorResponse('不在有效期内'));
@@ -1425,15 +2247,15 @@ app.post('/api/v1/verify/scan', async (req, res) => {
         const [result] = await connection.query(
             `UPDATE tickets SET
                 ticket_status = 'USED',
-                verified_at = NOW(),
-                verified_by = ?,
-                verified_device = ?,
-                verify_location = ?
+                check_status = 'CHECKED',
+                check_time = datetime('now'),
+                check_operator = ?,
+                verified_at = datetime('now'),
+                verified_by = ?
             WHERE id = ? AND ticket_status = 'ACTIVE'`,
             [
+                verifierInfo.verifierName || verifierInfo.verifierId,
                 verifierInfo.verifierId,
-                verifierInfo.deviceId || null,
-                verifierInfo.location || null,
                 ticket.id
             ]
         );
@@ -1445,30 +2267,35 @@ app.post('/api/v1/verify/scan', async (req, res) => {
 
         // 记录核销成功日志
         await connection.query(
-            `INSERT INTO verification_records (
-                ticket_id, ticket_no, order_id, verify_type, verify_status,
-                verifier_id, verifier_name, device_id, verify_location,
-                verify_gate, verify_time
-            ) VALUES (?, ?, ?, 'QR_CODE', 'SUCCESS', ?, ?, ?, ?, ?, NOW())`,
+            `INSERT INTO verify_records (
+                ticket_id, ticket_no, ticket_code, verify_result, verify_message,
+                operator_id, operator_name, device_id, gate_name, created_at
+            ) VALUES (?, ?, ?, 'SUCCESS', '核销成功', ?, ?, ?, ?, datetime('now'))`,
             [
                 ticket.id,
                 ticket.ticket_no,
-                ticket.order_id,
+                qrCodeToken.substring(0, 50),
                 verifierInfo.verifierId,
                 verifierInfo.verifierName || '',
                 verifierInfo.deviceId || '',
-                verifierInfo.location || '',
                 verifierInfo.gate || null
             ]
         );
 
         await connection.commit();
 
+        // 获取用户姓名和手机号（兼容不同列名）
+        const userName = ticket.user_name || ticket.visitor_name || '未知';
+        const userPhone = ticket.user_phone || ticket.visitor_phone || '';
+        const maskedPhone = userPhone && userPhone.length >= 11
+            ? userPhone.substring(0, 3) + '****' + userPhone.substring(7)
+            : '***';
+
         res.json(successResponse({
             ticketNo: ticket.ticket_no,
             ticketName: ticket.ticket_name,
-            userName: ticket.user_name,
-            userPhone: ticket.user_phone.substring(0, 3) + '****' + ticket.user_phone.substring(7),
+            userName: userName,
+            userPhone: maskedPhone,
             verifyStatus: 'SUCCESS',
             verifyTime: new Date()
         }, '核销成功'));
@@ -1490,8 +2317,8 @@ app.get('/api/v1/verify/records', async (req, res) => {
         const { verifierId, startDate, endDate, page = 1, pageSize = 20 } = req.query;
 
         let query = `
-            SELECT vr.*, t.ticket_name, t.user_name, t.user_phone
-            FROM verification_records vr
+            SELECT vr.*, t.ticket_name, t.user_name as visitor_name, t.user_phone
+            FROM verify_records vr
             LEFT JOIN tickets t ON vr.ticket_no = t.ticket_no
             WHERE 1=1
         `;
@@ -1499,17 +2326,17 @@ app.get('/api/v1/verify/records', async (req, res) => {
         const conditions = [];
 
         if (verifierId) {
-            conditions.push('vr.verifier_id = ?');
+            conditions.push('vr.operator_id = ?');
             params.push(verifierId);
         }
 
         if (startDate) {
-            conditions.push('vr.verify_time >= ?');
+            conditions.push('DATE(vr.created_at) >= ?');
             params.push(startDate);
         }
 
         if (endDate) {
-            conditions.push('vr.verify_time <= ?');
+            conditions.push('DATE(vr.created_at) <= ?');
             params.push(endDate);
         }
 
@@ -1517,28 +2344,28 @@ app.get('/api/v1/verify/records', async (req, res) => {
             query += ' AND ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY vr.verify_time DESC LIMIT ? OFFSET ?';
+        query += ' ORDER BY vr.created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(pageSize), (parseInt(page) - 1) * parseInt(pageSize));
 
         const [records] = await pool.query(query, params);
 
         // 查询总数
-        let countQuery = 'SELECT COUNT(*) as total FROM verification_records vr WHERE 1=1';
+        let countQuery = 'SELECT COUNT(*) as total FROM verify_records vr WHERE 1=1';
         const countParams = [];
         const countConditions = [];
 
         if (verifierId) {
-            countConditions.push('verifier_id = ?');
+            countConditions.push('operator_id = ?');
             countParams.push(verifierId);
         }
 
         if (startDate) {
-            countConditions.push('verify_time >= ?');
+            countConditions.push('DATE(created_at) >= ?');
             countParams.push(startDate);
         }
 
         if (endDate) {
-            countConditions.push('verify_time <= ?');
+            countConditions.push('DATE(created_at) <= ?');
             countParams.push(endDate);
         }
 
@@ -1576,32 +2403,37 @@ async function issueTickets(connection, params) {
         const qrCodeToken = generateQRCodeToken(ticketNo);
         const qrCodeShort = generateShortCode(ticketNo);
 
-        // 有效期设置（可根据实际活动时间调整）
-        const validStartTime = new Date('2024-06-01T09:00:00');
-        const validEndTime = new Date('2024-06-03T18:00:00');
+        // 有效期设置（活动时间：2026年5月1-3日）
+        const validStartTime = new Date('2026-05-01T09:00:00');
+        const validEndTime = new Date('2026-05-03T18:00:00');
 
         const [ticketResult] = await connection.query(
             `INSERT INTO tickets (
                 ticket_no, order_id, order_no, user_name, user_phone,
-                ticket_type_id, ticket_code, ticket_name, ticket_category,
-                qr_code_token, qr_code_short,
+                visitor_name, visitor_phone,
+                ticket_type_id, ticket_type_code, ticket_code, ticket_name, ticket_category,
+                qr_code_data, qr_code_token, qr_code_short,
                 valid_start_time, valid_end_time, ticket_status,
-                total_amount, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                total_amount
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 ticketNo,
                 orderId,
                 orderNo,
                 userInfo.name,
                 userInfo.phone,
+                userInfo.name,
+                userInfo.phone,
                 ticketTypeId,
                 ticketType.code,
+                ticketNo,  // 使用唯一票号而不是票种代码
                 ticketType.name,
                 ticketType.category || 'PAID',
                 qrCodeToken,
+                qrCodeToken,
                 qrCodeShort,
-                validStartTime,
-                validEndTime,
+                validStartTime.toISOString(),
+                validEndTime.toISOString(),
                 'ACTIVE',
                 ticketType.price / 100  // 转换为元
             ]
@@ -1646,7 +2478,7 @@ app.get('/api/v1/admin/stats', async (req, res) => {
 
         // 核销数量
         const [checkinStats] = await pool.query(
-            'SELECT COUNT(*) as count FROM verification_records'
+            'SELECT COUNT(*) as count FROM verify_records'
         );
 
         res.json(successResponse({
@@ -1853,13 +2685,13 @@ app.get('/api/v1/admin/checkins', async (req, res) => {
         const [checkins] = await pool.query(
             `SELECT
                 vr.ticket_no,
-                vr.verify_time as checked_at,
-                vr.verifier_id as checked_by,
+                vr.created_at as checked_at,
+                vr.operator_id as checked_by,
                 t.user_name,
                 t.ticket_name
-            FROM verification_records vr
+            FROM verify_records vr
             LEFT JOIN tickets t ON vr.ticket_no = t.ticket_no
-            ORDER BY vr.verify_time DESC
+            ORDER BY vr.created_at DESC
             LIMIT ?`,
             [limit]
         );
@@ -1931,9 +2763,9 @@ app.post('/api/v1/tickets/checkin', async (req, res) => {
 
         // 记录核销记录
         await pool.query(
-            `INSERT INTO verification_records (ticket_no, verify_time, verifier_id)
-            VALUES (?, NOW(), 'ADMIN')`,
-            [ticketNo]
+            `INSERT INTO verify_records (ticket_no, ticket_code, verify_result, verify_message, operator_id, operator_name, created_at)
+            VALUES (?, ?, 'SUCCESS', '管理员核销', 'ADMIN', '管理员', datetime('now'))`,
+            [ticketNo, ticketNo.substring(0, 50)]
         );
 
         res.json(successResponse({
@@ -1945,6 +2777,224 @@ app.post('/api/v1/tickets/checkin', async (req, res) => {
     } catch (error) {
         console.error('核销失败:', error);
         res.status(500).json(errorResponse('核销失败'));
+    }
+});
+
+// ==================== 微信小程序相关接口 ====================
+
+/**
+ * 查询微信小程序支付配置状态
+ * 供前端检查微信支付是否启用
+ */
+app.get('/api/v1/wechat/miniapp/config', (req, res) => {
+    const enabled = process.env.WECHAT_MINIAPP_ENABLED === 'true';
+    const hasAppId = !!process.env.WECHAT_MINIAPP_APPID;
+
+    res.json(successResponse({
+        enabled: enabled && hasAppId,
+        appid: process.env.WECHAT_MINIAPP_APPID || '',
+        message: !hasAppId ? '小程序AppID未配置' : (!enabled ? '小程序支付未启用' : '小程序支付已启用')
+    }, '查询成功'));
+});
+
+/**
+ * 微信小程序登录 - 获取OpenID
+ */
+app.get('/api/v1/wechat/miniapp/code2session', async (req, res) => {
+    try {
+        const { code } = req.query;
+
+        if (!code) {
+            return res.status(400).json(errorResponse('code不能为空'));
+        }
+
+        const appId = process.env.WECHAT_MINIAPP_APPID;
+        const appSecret = process.env.WECHAT_MINIAPP_SECRET;
+
+        if (!appId || !appSecret) {
+            return res.status(500).json(errorResponse('微信小程序配置不完整'));
+        }
+
+        // 调用微信API获取session_key和openid
+        const https = require('https');
+        const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appId}&secret=${appSecret}&js_code=${code}&grant_type=authorization_code`;
+
+        https.get(url, (wechatRes) => {
+            let data = '';
+
+            wechatRes.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            wechatRes.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+
+                    if (result.errcode) {
+                        console.error('[微信登录] 获取OpenID失败:', result);
+                        return res.status(400).json(errorResponse(result.errmsg || '获取OpenID失败'));
+                    }
+
+                    // 返回openid和session_key
+                    res.json(successResponse({
+                        openid: result.openid,
+                        sessionKey: result.session_key,
+                        unionid: result.unionid
+                    }, '获取OpenID成功'));
+
+                } catch (error) {
+                    console.error('[微信登录] 解析响应失败:', error);
+                    res.status(500).json(errorResponse('解析响应失败'));
+                }
+            });
+
+        }).on('error', (error) => {
+            console.error('[微信登录] 请求微信API失败:', error);
+            res.status(500).json(errorResponse('请求微信API失败'));
+        });
+
+    } catch (error) {
+        console.error('[微信登录] 错误:', error);
+        res.status(500).json(errorResponse('服务器错误'));
+    }
+});
+
+/**
+ * 生成微信小程序URL Scheme
+ * 用于从H5页面跳转到小程序
+ */
+app.post('/api/v1/wechat/miniapp/scheme', async (req, res) => {
+    try {
+        const { orderNo, path = 'pages/payment/payment', query = {} } = req.body;
+
+        if (!orderNo) {
+            return res.status(400).json(errorResponse('订单号不能为空'));
+        }
+
+        const appId = process.env.WECHAT_MINIAPP_APPID;
+        if (!appId) {
+            return res.status(500).json(errorResponse('微信小程序配置不完整'));
+        }
+
+        // 构建query字符串
+        const queryString = Object.entries({ orderNo, ...query })
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+            .join('&');
+
+        // 构建完整的path
+        const fullPath = `${path}?${queryString}`;
+
+        // 生成URL Scheme
+        // 格式: weixin://dl/business/?t=TICKET
+        // 实际应该调用微信API生成，这里先提供模拟方案
+        const scheme = `weixin://dl/business/?s=${Buffer.from(fullPath).toString('base64')}`;
+
+        // 同时生成URL Link（备用）
+        const link = `https://wxaurl.cn/placeholder?orderNo=${orderNo}`;
+
+        res.json(successResponse({
+            scheme,
+            link,
+            path: fullPath,
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30分钟后过期
+        }, '生成URL Scheme成功'));
+
+    } catch (error) {
+        console.error('[URL Scheme] 错误:', error);
+        res.status(500).json(errorResponse('生成URL Scheme失败'));
+    }
+});
+
+/**
+ * 微信小程序支付创建
+ * 扩展现有的汇付支付接口，支持小程序支付
+ */
+app.post('/api/v1/payments/miniapp/create', async (req, res) => {
+    let connection;
+    try {
+        const { orderNo, wxOpenid, wxAppid } = req.body;
+
+        if (!orderNo || !wxOpenid) {
+            return res.status(400).json(errorResponse('订单号和OpenID不能为空'));
+        }
+
+        connection = await pool;
+        await connection.beginTransaction();
+
+        // 查询订单
+        const [orders] = await connection.query(
+            'SELECT * FROM orders WHERE order_no = ? FOR UPDATE',
+            [orderNo]
+        );
+
+        if (orders.length === 0) {
+            await connection.rollback();
+            return res.status(404).json(errorResponse('订单不存在'));
+        }
+
+        const order = orders[0];
+
+        if (order.payment_status === 'PAID') {
+            await connection.rollback();
+            return res.status(400).json(errorResponse('订单已支付'));
+        }
+
+        // TODO: 调用汇付小程序支付API
+        // 这里需要等待汇付开通小程序支付后实现
+        // 目前返回模拟数据
+
+        const mockPaymentData = {
+            orderId: orderNo,
+            timestamp: Math.floor(Date.now() / 1000),
+            nonceStr: generateOrderNo(),
+            prepayId: `PREPAY_ID_${Date.now()}`,
+            signType: 'RSA',
+            package: `prepay_id=PREPAY_ID_${Date.now()}`
+        };
+
+        await connection.rollback();
+
+        res.json(successResponse({
+            ...mockPaymentData,
+            message: '小程序支付功能待微信支付开通后启用'
+        }, '创建小程序支付成功（模拟）'));
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('[小程序支付] 错误:', error);
+        res.status(500).json(errorResponse('创建小程序支付失败'));
+    }
+});
+
+/**
+ * 小程序支付状态查询（轮询用）
+ */
+app.get('/api/v1/payments/:orderNo/status', async (req, res) => {
+    try {
+        const { orderNo } = req.params;
+
+        const [orders] = await pool.query(
+            'SELECT * FROM orders WHERE order_no = ?',
+            [orderNo]
+        );
+
+        if (orders.length === 0) {
+            return res.status(404).json(errorResponse('订单不存在'));
+        }
+
+        const order = orders[0];
+
+        res.json(successResponse({
+            orderNo: order.order_no,
+            paymentStatus: order.payment_status,
+            orderStatus: order.order_status,
+            paidAmount: order.paid_amount,
+            paidAt: order.paid_at
+        }, '查询成功'));
+
+    } catch (error) {
+        console.error('[支付状态查询] 错误:', error);
+        res.status(500).json(errorResponse('查询支付状态失败'));
     }
 });
 
@@ -1975,9 +3025,20 @@ app.listen(PORT, () => {
     console.log(`     • 支付回调: POST   http://localhost:${PORT}/api/v1/payments/notify`);
     console.log(`     • 邀请函申请: POST  http://localhost:${PORT}/api/v1/invitations/apply`);
     console.log(`     • 我的申请: GET    http://localhost:${PORT}/api/v1/invitations/my-applications`);
+    console.log(`     • 我的邀请函: GET  http://localhost:${PORT}/api/v1/invitations/my-tickets`);
+    console.log(`     • 所有申请: GET    http://localhost:${PORT}/api/v1/invitations/applications`);
+    console.log(`     • 同意申请: POST   http://localhost:${PORT}/api/v1/invitations/:id/approve`);
+    console.log(`     • 拒绝申请: POST   http://localhost:${PORT}/api/v1/invitations/:id/reject`);
+    console.log(`     • 所有票券: GET    http://localhost:${PORT}/api/v1/tickets/all`);
     console.log(`     • 我的票券: GET    http://localhost:${PORT}/api/v1/tickets/my-tickets`);
+    console.log(`     • 核销预览: POST   http://localhost:${PORT}/api/v1/verify/preview`);
     console.log(`     • 扫码核销: POST   http://localhost:${PORT}/api/v1/verify/scan`);
     console.log(`     • 核销记录: GET    http://localhost:${PORT}/api/v1/verify/records`);
+    console.log('');
+    console.log('   微信小程序端点:');
+    console.log(`     • 获取OpenID: GET  http://localhost:${PORT}/api/v1/wechat/miniapp/code2session`);
+    console.log(`     • URL Scheme: POST http://localhost:${PORT}/api/v1/wechat/miniapp/scheme`);
+    console.log(`     • 小程序支付: POST http://localhost:${PORT}/api/v1/payments/miniapp/create`);
     console.log('');
     console.log('   环境变量:');
     console.log(`     • 数据库: SQLite (data/expo_tickets.db)`);

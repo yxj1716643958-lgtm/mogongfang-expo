@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>我的门票 - 简化版</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #131315;
+            color: #e5e1e4;
+        }
+        .ticket-card {
+            background: #201f21;
+            border: 1px solid #00e5ff33;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .ticket-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .ticket-status {
+            background: #00e5ff33;
+            color: #00e5ff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .ticket-info {
+            margin-bottom: 20px;
+        }
+        .ticket-info p {
+            margin: 8px 0;
+        }
+        .qrcode-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .qrcode-section h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #3b494c;
+            border-radius: 4px;
+            background: #131315;
+            color: #e5e1e4;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #00e5ff;
+            color: #00363d;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>我的门票</h1>
+
+    <!-- 查询表单 -->
+    <div id="searchForm">
+        <input type="tel" id="phoneInput" placeholder="请输入手机号" value="18730880262"/>
+        <button onclick="queryTickets()">查询门票</button>
+    </div>
+
+    <!-- 加载状态 -->
+    <div id="loadingState" class="hidden">
+        <p>加载中...</p>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="emptyState" class="hidden">
+        <p>暂无门票信息</p>
+    </div>
+
+    <!-- 门票列表 -->
+    <div id="ticketsList"></div>
+
+    <!-- 本地QRCode库 -->
+    <script src="assets/js/qrcode.min.js"></script>
+    <script src="assets/js/qrcodejs.min.js"></script>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/v1';
+
+        async function queryTickets() {
+            const phone = document.getElementById('phoneInput').value.trim();
+            if (!phone) {
+                alert('请输入手机号');
+                return;
+            }
+
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('ticketsList').innerHTML = '';
+
+            try {
+                // 并行查询门票和邀请函
+                const [ticketsResponse, invitationsResponse] = await Promise.all([
+                    fetch(`${API_BASE}/tickets/my-tickets?phone=${encodeURIComponent(phone)}`),
+                    fetch(`${API_BASE}/invitations/my-tickets?phone=${encodeURIComponent(phone)}`)
+                ]);
+
+                const ticketsResult = await ticketsResponse.json();
+                const invitationsResult = await invitationsResponse.json();
+
+                document.getElementById('loadingState').classList.add('hidden');
+
+                // 合并票券
+                const allTickets = [];
+
+                if (ticketsResult.code === 'SUCCESS' && ticketsResult.data.list) {
+                    allTickets.push(...ticketsResult.data.list);
+                }
+
+                if (invitationsResult.code === 'SUCCESS' && invitationsResult.data.tickets) {
+                    allTickets.push(...invitationsResult.data.tickets.map(t => ({
+                        ticketId: t.ticket_no,
+                        ticketName: t.ticket_name,
+                        ticketNo: t.ticket_no,
+                        ticketCategory: t.ticket_category,
+                        ticketStatus: t.ticket_status,
+                        ticketPrice: 0,
+                        userName: t.user_name,
+                        userPhone: t.user_phone,
+                        qrCodeToken: t.qr_code_token,
+                        qrCodeShort: t.qr_code_short,
+                        validStartTime: t.valid_start_time,
+                        validEndTime: t.valid_end_time,
+                        verifiedAt: t.verified_at,
+                        verifiedBy: t.verified_by
+                    })));
+                }
+
+                if (allTickets.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    return;
+                }
+
+                // 渲染票券
+                allTickets.forEach(ticket => {
+                    const ticketCard = document.createElement('div');
+                    ticketCard.className = 'ticket-card';
+
+                    const ticketId = ticket.ticketId || ticket.ticketNo;
+                    const isUsed = ticket.ticketStatus === 'USED';
+
+                    ticketCard.innerHTML = `
+                        <div class="ticket-header">
+                            <div class="ticket-title">${ticket.ticketName}</div>
+                            <div class="ticket-status">${isUsed ? '已使用' : '有效'}</div>
+                        </div>
+                        <div class="ticket-info">
+                            <p><strong>票号：</strong>${ticket.ticketNo}</p>
+                            <p><strong>姓名：</strong>${ticket.userName}</p>
+                            <p><strong>手机：</strong>${ticket.userPhone}</p>
+                            <p><strong>有效期：</strong>${formatDate(ticket.validStartTime)} - ${formatDate(ticket.validEndTime)}</p>
+                        </div>
+                        ${!isUsed ? `
+                        <div class="qrcode-section">
+                            <h4>入场二维码</h4>
+                            <div id="qrcode-${ticketId}"></div>
+                        </div>
+                        ` : `
+                        <div style="text-align: center; padding: 20px; color: #888;">
+                            此票已使用
+                        </div>
+                        `}
+                    `;
+
+                    document.getElementById('ticketsList').appendChild(ticketCard);
+
+                    // 生成二维码
+                    if (!isUsed) {
+                        setTimeout(() => generateQRCode(ticket), 100);
+                    }
+                });
+
+            } catch (error) {
+                console.error('查询失败:', error);
+                document.getElementById('loadingState').classList.add('hidden');
+                alert('查询失败: ' + error.message);
+            }
+        }
+
+        function generateQRCode(ticket) {
+            const ticketId = ticket.ticketId || ticket.ticketNo;
+            console.log('生成二维码:', ticketId, ticket);
+
+            const container = document.getElementById(`qrcode-${ticketId}`);
+            if (!container) {
+                console.error('找不到容器:', `qrcode-${ticketId}`);
+                return;
+            }
+
+            const qrData = ticket.qrCodeToken || ticket.qrCodeShort || ticket.ticketNo;
+            console.log('二维码数据:', qrData ? qrData.substring(0, 50) + '...' : '无数据');
+
+            if (!qrData) {
+                container.innerHTML = '<p style="color: red;">无二维码数据</p>';
+                return;
+            }
+
+            try {
+                new QRCode(container, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                console.log('二维码生成成功');
+            } catch (e) {
+                console.error('二维码生成失败:', e);
+                container.innerHTML = '<p style="color: red;">二维码生成失败: ' + e.message + '</p>';
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 页面加载时自动查询
+        window.addEventListener('load', () => {
+            console.log('页面已加载');
+            console.log('QRCode库状态:', typeof QRCode !== 'undefined' ? '已加载' : '未加载');
+            setTimeout(() => queryTickets(), 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!--pages/result/result.wxml-->
+<view class="container">
+  <!-- 支付成功 -->
+  <view wx:if="{{status === 'success'}}" class="result-wrapper success">
+    <view class="result-icon">✓</view>
+    <view class="result-title">支付成功</view>
+    <view class="result-desc">您的票券已生成</view>
+
+    <view class="card">
+      <view class="info-row">
+        <text class="label">订单号</text>
+        <text class="value">{{orderNo}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">票种</text>
+        <text class="value">{{ticketName}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">数量</text>
+        <text class="value">{{quantity}}张</text>
+      </view>
+    </view>
+
+    <view class="tickets-section">
+      <view class="section-title">我的票券</view>
+      <view wx:for="{{tickets}}" wx:key="ticketNo" class="ticket-item">
+        <view class="ticket-info">
+          <text class="ticket-name">{{item.ticketName}}</text>
+          <text class="ticket-no">票号：{{item.ticketNo}}</text>
+        </view>
+        <view class="ticket-qrcode">
+          <image src="{{item.qrCodeUrl}}" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+
+    <button class="btn-view" bindtap="viewTickets">查看全部票券</button>
+    <button class="btn-back" bindtap="backToH5">返回H5页面</button>
+  </view>
+
+  <!-- 支付失败 -->
+  <view wx:if="{{status === 'failed'}}" class="result-wrapper failed">
+    <view class="result-icon">✕</view>
+    <view class="result-title">支付失败</view>
+    <view class="result-desc">{{errorMsg || '支付过程中出现问题'}}</view>
+
+    <button class="btn-retry" bindtap="retryPay">重新支付</button>
+    <button class="btn-back" bindtap="backToH5">返回H5页面</button>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>查询支付结果中...</text>
+  </view>
+</view>

@@ -28,10 +28,22 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
 
+    // 解析URL，移除查询参数
+    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = urlObj.pathname;
+
     // 处理根路径
-    let filePath = '.' + req.url;
+    let filePath = '.' + pathname;
     if (filePath === './') {
         filePath = './index.html';
+    }
+
+    // 先检查public目录
+    const publicPath = './public' + pathname;
+    if (pathname !== '/' && fs.existsSync(publicPath)) {
+        filePath = publicPath;
+    } else if (filePath === './index.html' && fs.existsSync('./public/index.html')) {
+        filePath = './public/index.html';
     }
 
     // 获取文件扩展名
