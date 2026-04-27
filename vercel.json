@@ -1,16 +1,9 @@
 {
-  "version": 2,
-  "name": "mogongfang-expo",
-  "builds": [
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  }
 }

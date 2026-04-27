@@ -4,10 +4,32 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>我的门票 - 东北亚数字文创与模玩艺术博览会</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- 尝试加载Tailwind CSS CDN -->
+    <script>
+        // Tailwind CSS加载失败时的备用样式
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT' && e.target.src.includes('tailwindcss')) {
+                console.warn('Tailwind CSS CDN加载失败，使用内联样式');
+                document.documentElement.style.setProperty('--bg-primary', '#131315');
+                document.documentElement.style.setProperty('--bg-surface', '#201f21');
+                document.documentElement.style.setProperty('--text-primary', '#e5e1e4');
+            }
+        }, true);
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries" onerror="this.onerror=null;console.warn('Tailwind CDN加载失败')"></script>
+    <!-- 本地QRCode库 - 只加载qrcodejs.min.js（传统UMD格式） -->
+    <script src="assets/js/qrcodejs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- 备用内联样式 -->
+    <style>
+        .ticket-card {
+            background: linear-gradient(135deg, rgba(0,229,255,0.05) 0%, rgba(254,201,49,0.05) 100%);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -48,6 +70,361 @@
         .ticket-card {
             background: linear-gradient(135deg, rgba(0,229,255,0.05) 0%, rgba(254,201,49,0.05) 100%);
         }
+
+        /* ==================== 动漫风格票券样式 ==================== */
+        .anime-ticket-card {
+            position: relative;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow:
+                0 10px 40px rgba(0, 229, 255, 0.15),
+                0 0 0 1px rgba(0, 229, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transform-style: preserve-3d;
+            transition: all 0.3s ease;
+        }
+
+        .anime-ticket-card:hover {
+            transform: translateY(-5px) rotateX(2deg);
+            box-shadow:
+                0 20px 60px rgba(0, 229, 255, 0.25),
+                0 0 0 1px rgba(0, 229, 255, 0.2);
+        }
+
+        /* 全息效果 */
+        .ticket-holographic {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                linear-gradient(45deg,
+                    transparent 30%,
+                    rgba(0, 229, 255, 0.03) 50%,
+                    transparent 70%
+                );
+            background-size: 200% 200%;
+            animation: holographic 3s ease infinite;
+            pointer-events: none;
+        }
+
+        @keyframes holographic {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .ticket-content {
+            position: relative;
+            z-index: 1;
+            padding: 0;
+        }
+
+        /* 票面头部 */
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            background: linear-gradient(90deg,
+                rgba(0, 229, 255, 0.1) 0%,
+                rgba(254, 201, 49, 0.05) 100%
+            );
+            border-bottom: 2px solid rgba(0, 229, 255, 0.2);
+        }
+
+        .ticket-branding {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #00e5ff;
+            text-transform: uppercase;
+        }
+
+        .brand-icon {
+            font-size: 18px;
+            color: #fec931;
+            text-shadow: 0 0 10px rgba(254, 201, 49, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+
+        .ticket-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ticket-badge.active {
+            background: linear-gradient(135deg, #00e5ff 0%, #00daf3 100%);
+            color: #00363d;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
+        }
+
+        .ticket-badge.used {
+            background: linear-gradient(135deg, #849396 0%, #6b7a7d 100%);
+            color: #e5e1e4;
+        }
+
+        .ticket-badge.expired {
+            background: linear-gradient(135deg, #ff4d4f 0%, #d9363e 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 77, 79, 0.3);
+        }
+
+        /* 票面主体 */
+        .ticket-body {
+            display: flex;
+            padding: 25px;
+            gap: 25px;
+        }
+
+        .ticket-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ticket-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #c3f5ff;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+
+        .ticket-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #849396;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 60px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #e5e1e4;
+            font-weight: 500;
+        }
+
+        .ticket-no {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 12px;
+            color: #00e5ff;
+            letter-spacing: 3px;
+            opacity: 0.7;
+            margin-top: auto;
+        }
+
+        /* 二维码区域 */
+        .ticket-qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .qr-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            background: #fff;
+            border-radius: 15px;
+            padding: 12px;
+            box-shadow:
+                0 8px 32px rgba(0, 229, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .qr-code {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .qr-shine {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 60%
+            );
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .qr-tip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #00e5ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tip-icon {
+            font-size: 16px;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 已核销状态 */
+        .ticket-used {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: 160px;
+        }
+
+        .used-stamp {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            width: 120px;
+            height: 120px;
+            border: 3px solid #52c41a;
+            border-radius: 50%;
+            background: rgba(82, 196, 26, 0.1);
+        }
+
+        .used-icon {
+            font-size: 48px;
+            color: #52c41a;
+        }
+
+        .used-text {
+            font-size: 14px;
+            color: #52c41a;
+            font-weight: 700;
+        }
+
+        .used-time {
+            font-size: 11px;
+            color: #849396;
+        }
+
+        /* 票面底部 */
+        .ticket-footer {
+            position: relative;
+            padding: 15px 25px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(0, 229, 255, 0.1);
+        }
+
+        .footer-deco {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                #00e5ff 50%,
+                transparent 100%
+            );
+            border-radius: 2px;
+        }
+
+        .ticket-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            border-radius: 25px;
+            color: #00e5ff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 229, 255, 0.2);
+            border-color: rgba(0, 229, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
+        }
+
+        .btn-icon {
+            font-size: 16px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .ticket-body {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .ticket-info {
+                width: 100%;
+                text-align: center;
+            }
+
+            .ticket-meta {
+                align-items: center;
+            }
+
+            .ticket-title {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 <body class="bg-background text-on-surface font-body">
@@ -77,27 +454,30 @@
                 <p class="text-on-surface-variant">请出示二维码入场</p>
             </header>
 
-            <!-- Search Form -->
-            <div class="bg-surface-container border border-[#00e5ff]/20 rounded-lg p-6 mb-8">
-                <label class="block text-sm font-bold mb-3">查询门票</label>
-                <div class="flex gap-4">
-                    <input type="tel" id="phoneInput"
-                        class="flex-1 bg-[#131315] border border-[#3b494c] rounded px-4 py-3 focus:border-[#00e5ff] focus:outline-none"
-                        placeholder="请输入购票/申请手机号">
-                    <button onclick="queryTickets()"
-                        class="bg-primary-container text-on-primary-container px-8 py-3 font-bold rounded hover:bg-[#00daf3] transition-colors">
-                        查询
-                    </button>
-                </div>
-                <p class="text-on-surface-variant/50 text-xs mt-2">
-                    提示：请输入购票时填写的手机号查询
-                </p>
-            </div>
-
             <!-- Loading State -->
             <div id="loadingState" class="hidden text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-container border-t-transparent"></div>
-                <p class="text-on-surface-variant mt-4">查询中...</p>
+                <p class="text-on-surface-variant mt-4">加载中...</p>
+            </div>
+
+            <!-- Not Logged In State -->
+            <div id="notLoggedInState" class="hidden text-center py-12">
+                <span class="material-symbols-outlined text-6xl text-outline-variant">lock</span>
+                <p class="text-on-surface-variant mt-4">请先登录</p>
+                <a href="index.html" class="inline-block mt-4 bg-primary-container text-on-primary-container px-8 py-3 font-bold rounded hover:bg-[#00daf3] transition-colors">
+                    前往登录
+                </a>
+                <div class="mt-8 pt-8 border-t border-outline-variant/20">
+                    <p class="text-on-surface-variant/50 text-xs mb-3">或输入手机号直接查询（测试用）</p>
+                    <div class="flex gap-2 max-w-md mx-auto">
+                        <input type="tel" id="quickPhoneInput"
+                            class="flex-1 bg-[#131315] border border-[#3b494c] rounded px-4 py-2 focus:border-[#00e5ff] focus:outline-none"
+                            placeholder="输入购票手机号">
+                        <button onclick="quickQuery()" class="bg-primary-container text-on-primary-container px-6 py-2 font-bold rounded hover:bg-[#00daf3] transition-colors">
+                            查询
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Empty State -->
@@ -142,10 +522,39 @@
     <script>
         // ==================== 配置 ====================
         const API_CONFIG = {
-            baseUrl: 'https://101.200.126.62/api/v1',  // 阿里云ECS后端API地址（HTTPS）
+            baseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:3001/api/v1'   // 本地开发
+                : '/api/proxy',  // Vercel生产环境 - 使用代理解决混合内容问题
             // 支持加密token二维码
             useEncryptedToken: true
         };
+
+        // ==================== 获取当前用户信息 ====================
+        function getCurrentUser() {
+            // 从localStorage获取用户信息（支持多个key）
+            const keys = ['ne_adcimae_user', 'userInfo'];
+
+            for (const key of keys) {
+                const userInfo = localStorage.getItem(key);
+                if (userInfo) {
+                    try {
+                        const user = JSON.parse(userInfo);
+                        // 如果有手机号，返回用户信息
+                        if (user.phone) {
+                            return user;
+                        }
+                        // 如果没有手机号但有用户名，尝试从用户名提取手机号
+                        if (user.username && /^1[3-9]\d{9}$/.test(user.username)) {
+                            user.phone = user.username;
+                            return user;
+                        }
+                    } catch (e) {
+                        console.error('解析用户信息失败:', e);
+                    }
+                }
+            }
+            return null;
+        }
 
         // ==================== 状态样式 ====================
         function getStatusClass(status) {
@@ -186,17 +595,45 @@
             });
         }
 
+        function formatDateShort(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'ACTIVE': '◉',
+                'USED': '✓',
+                'CANCELLED': '✕',
+                'EXPIRED': '!',
+                'PENDING': '◷',
+                'APPROVED': '✓',
+                'REJECTED': '✕'
+            };
+            return icons[status] || '•';
+        }
+
         function maskPhone(phone) {
             if (!phone || phone.length < 11) return phone;
             return phone.substring(0, 3) + '****' + phone.substring(7);
         }
 
         // ==================== 查询门票 ====================
-        async function queryTickets() {
-            const phone = document.getElementById('phoneInput').value.trim();
+        async function queryTickets(phone) {
+            // 如果没有传入手机号，尝试从输入框获取（兼容旧代码）
             if (!phone) {
-                alert('请输入手机号');
-                return;
+                const phoneInput = document.getElementById('phoneInput');
+                if (phoneInput) {
+                    phone = phoneInput.value.trim();
+                }
+                if (!phone) {
+                    alert('请输入手机号');
+                    return;
+                }
             }
 
             if (!/^1[3-9]\d{9}$/.test(phone)) {
@@ -208,35 +645,73 @@
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('ticketsList').innerHTML = '';
-            document.getElementById('applicationsSection').classList.add('hidden');
+            const applicationsSection = document.getElementById('applicationsSection');
+            if (applicationsSection) {
+                applicationsSection.classList.add('hidden');
+            }
 
             try {
-                // 查询票券
-                const ticketsResponse = await fetch(`${API_CONFIG.baseUrl}/tickets/my-tickets?phone=${encodeURIComponent(phone)}`);
-                const ticketsResult = await ticketsResponse.json();
+                // 并行查询：门票、邀请函票券、申请状态
+                const [ticketsResponse, invitationsResponse, applicationsResponse] = await Promise.all([
+                    fetch(`${API_CONFIG.baseUrl}/tickets/my-tickets?phone=${encodeURIComponent(phone)}`),
+                    fetch(`${API_CONFIG.baseUrl}/invitations/my-tickets?phone=${encodeURIComponent(phone)}`),
+                    fetch(`${API_CONFIG.baseUrl}/invitations/my-applications?phone=${encodeURIComponent(phone)}`)
+                ]);
 
-                // 查询申请
-                const applicationsResponse = await fetch(`${API_CONFIG.baseUrl}/invitations/my-applications?phone=${encodeURIComponent(phone)}`);
+                const ticketsResult = await ticketsResponse.json();
+                const invitationsResult = await invitationsResponse.json();
                 const applicationsResult = await applicationsResponse.json();
 
                 // 隐藏加载状态
                 document.getElementById('loadingState').classList.add('hidden');
 
-                // 处理票券数据
-                if (ticketsResult.code === 'SUCCESS') {
-                    renderTickets(ticketsResult.data.list || []);
+                // 合并所有票券（门票 + 邀请函票券）
+                const allTickets = [];
+
+                // 添加普通门票
+                if (ticketsResult.code === 'SUCCESS' && ticketsResult.data.list) {
+                    allTickets.push(...ticketsResult.data.list);
+                }
+
+                // 添加邀请函票券
+                if (invitationsResult.code === 'SUCCESS' && invitationsResult.data.tickets) {
+                    allTickets.push(...invitationsResult.data.tickets.map(ticket => ({
+                        ticketId: ticket.ticket_no,
+                        ticketName: ticket.ticket_name,
+                        ticketNo: ticket.ticket_no,
+                        ticketCategory: ticket.ticket_category,
+                        ticketStatus: ticket.ticket_status,
+                        ticketPrice: 0,
+                        userName: ticket.user_name,
+                        userPhone: ticket.user_phone,
+                        qrCodeToken: ticket.qr_code_token,
+                        qrCodeShort: ticket.qr_code_short,
+                        validStartTime: ticket.valid_start_time,
+                        validEndTime: ticket.valid_end_time,
+                        verifiedAt: ticket.verified_at,
+                        verifiedBy: ticket.verified_by
+                    })));
+                }
+
+                // 渲染合并后的票券列表
+                if (allTickets.length > 0) {
+                    renderTickets(allTickets);
                 }
 
                 // 处理申请数据
-                if (applicationsResult.code === 'SUCCESS') {
-                    renderApplications(applicationsResult.data.list || []);
+                if (applicationsResult.code === 'SUCCESS' && applicationsResult.data.list) {
+                    // 只显示待审核的申请（已通过审核的已经生成票券了）
+                    const pendingApps = applicationsResult.data.list.filter(app => app.audit_status === 'PENDING');
+                    renderApplications(pendingApps);
                 }
 
                 // 如果都为空，显示空状态
-                const hasTickets = ticketsResult.code === 'SUCCESS' && ticketsResult.data.list && ticketsResult.data.list.length > 0;
-                const hasApplications = applicationsResult.code === 'SUCCESS' && applicationsResult.data.list && applicationsResult.data.list.length > 0;
+                const hasTickets = allTickets.length > 0;
+                const hasPendingApps = applicationsResponse.code === 'SUCCESS' &&
+                                      applicationsResult.data.list &&
+                                      applicationsResult.data.list.some(app => app.audit_status === 'PENDING');
 
-                if (!hasTickets && !hasApplications) {
+                if (!hasTickets && !hasPendingApps) {
                     document.getElementById('emptyState').classList.remove('hidden');
                 }
 
@@ -255,98 +730,96 @@
                 return;
             }
 
-            container.innerHTML = tickets.map(ticket => `
-                <div class="ticket-card bg-surface-container border border-[#00e5ff]/20 rounded-lg overflow-hidden">
-                    <div class="p-6">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="font-headline text-xl font-bold">${ticket.ticketName}</h3>
-                                    <span class="px-3 py-1 rounded text-xs font-bold ${getStatusClass(ticket.ticketStatus)}">
-                                        ${getStatusText(ticket.ticketStatus)}
-                                    </span>
-                                </div>
-                                <p class="text-on-surface-variant text-sm">票号：${ticket.ticketNo}</p>
+            container.innerHTML = tickets.map(ticket => {
+                // 确保每个票券都有唯一的ID
+                const ticketId = ticket.ticketId || ticket.ticketNo || `ticket_${Math.random().toString(36).substr(2, 9)}`;
+
+                return `
+                <div class="anime-ticket-card">
+                    <div class="ticket-holographic"></div>
+                    <div class="ticket-content">
+                        <!-- 票面头部装饰 -->
+                        <div class="ticket-header">
+                            <div class="ticket-branding">
+                                <span class="brand-icon">✦</span>
+                                <span class="brand-text">NE ADCI MAE</span>
+                                <span class="brand-icon">✦</span>
                             </div>
-                            ${ticket.ticketCategory === 'PAID' ? `
-                            <div class="text-right">
-                                <p class="text-2xl font-bold text-primary">¥${(ticket.ticketPrice / 100).toFixed(2)}</p>
+                            <div class="ticket-badge ${ticket.ticketStatus.toLowerCase()}">
+                                ${getStatusIcon(ticket.ticketStatus)}
+                                <span>${getStatusText(ticket.ticketStatus)}</span>
+                            </div>
+                        </div>
+
+                        <!-- 票面主体 -->
+                        <div class="ticket-body">
+                            <div class="ticket-info">
+                                <h3 class="ticket-title">${ticket.ticketName}</h3>
+                                <div class="ticket-meta">
+                                    <div class="meta-item">
+                                        <span class="meta-label">持票人</span>
+                                        <span class="meta-value">${ticket.userName}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">手机号</span>
+                                        <span class="meta-value">${maskPhone(ticket.userPhone)}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">有效期</span>
+                                        <span class="meta-value">${formatDateShort(ticket.validStartTime)}</span>
+                                    </div>
+                                </div>
+                                <div class="ticket-no">NO.${ticket.ticketNo.slice(-8)}</div>
+                            </div>
+
+                            ${ticket.ticketStatus === 'ACTIVE' ? `
+                            <div class="ticket-qr-section">
+                                <div class="qr-container">
+                                    <img id="qrcode-${ticketId}" class="qr-code" alt="入场二维码">
+                                    <div class="qr-shine"></div>
+                                </div>
+                                <div class="qr-tip">
+                                    <span class="tip-icon">⟳</span>
+                                    <span>扫码入场</span>
+                                </div>
+                            </div>
+                            ` : ticket.ticketStatus === 'USED' ? `
+                            <div class="ticket-used">
+                                <div class="used-stamp">
+                                    <span class="used-icon">✓</span>
+                                    <span class="used-text">已核销</span>
+                                </div>
+                                <div class="used-time">${formatDate(ticket.verifiedAt)}</div>
                             </div>
                             ` : ''}
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
-                            <div>
-                                <span class="text-on-surface-variant">姓名：</span>
-                                <span>${ticket.userName}</span>
-                            </div>
-                            <div>
-                                <span class="text-on-surface-variant">手机：</span>
-                                <span>${maskPhone(ticket.userPhone)}</span>
-                            </div>
-                            <div>
-                                <span class="text-on-surface-variant">有效期：</span>
-                                <span>${formatDate(ticket.validStartTime)} - ${formatDate(ticket.validEndTime)}</span>
-                            </div>
-                            ${ticket.verifiedAt ? `
-                            <div>
-                                <span class="text-on-surface-variant">核销时间：</span>
-                                <span class="text-primary">${formatDate(ticket.verifiedAt)}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-
-                        ${ticket.ticketStatus === 'ACTIVE' ? `
-                        <div class="bg-white rounded-lg p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-primary">qr_code</span>
-                                    <span class="text-sm font-bold">入场二维码</span>
-                                </div>
-                                <span class="text-on-surface-variant/70 text-xs">请出示二维码入场</span>
-                            </div>
-                            <div class="flex items-center justify-between gap-4">
-                                <canvas id="qrcode-${ticket.ticketId}" class="bg-white p-2 rounded"></canvas>
-                                <div class="text-right space-y-2">
-                                    <button onclick="saveQRCode('${ticket.ticketNo}')" class="block w-full text-primary text-sm hover:underline">
-                                        保存图片
-                                    </button>
-                                    <button onclick="shareTicket('${ticket.ticketNo}')" class="block w-full text-on-surface-variant text-sm hover:underline">
-                                        分享门票
-                                    </button>
-                                </div>
+                        <!-- 票面底部 -->
+                        <div class="ticket-footer">
+                            <div class="footer-deco"></div>
+                            <div class="ticket-actions">
+                                ${ticket.ticketStatus === 'ACTIVE' ? `
+                                <button onclick="saveQRCode('${ticket.ticketNo}')" class="action-btn">
+                                    <span class="btn-icon">⬇</span>
+                                    <span>保存</span>
+                                </button>
+                                <button onclick="shareTicket('${ticket.ticketNo}')" class="action-btn">
+                                    <span class="btn-icon">⤳</span>
+                                    <span>分享</span>
+                                </button>
+                                ` : ''}
                             </div>
                         </div>
-                        <div class="mt-4 p-4 bg-primary-container/5 rounded border border-primary/10">
-                            <p class="text-xs text-on-surface-variant">
-                                <span class="material-symbols-outlined text-sm align-middle">info</span>
-                                <span class="align-middle">请于展览期间出示此二维码入场，二维码仅供本人使用，请勿转发他人。</span>
-                            </p>
-                        </div>
-                        ` : ticket.ticketStatus === 'USED' ? `
-                        <div class="p-6 bg-outline-variant/5 rounded border border-outline-variant/20 text-center">
-                            <span class="material-symbols-outlined text-4xl text-on-surface-variant">check_circle</span>
-                            <p class="text-on-surface-variant mt-2">此门票已使用</p>
-                            <p class="text-on-surface-variant/70 text-sm mt-1">核销时间：${formatDate(ticket.verifiedAt)}</p>
-                        </div>
-                        ` : ticket.ticketStatus === 'EXPIRED' ? `
-                        <div class="p-6 bg-tertiary-container/5 rounded border border-tertiary/20 text-center">
-                            <span class="material-symbols-outlined text-4xl text-tertiary">event_busy</span>
-                            <p class="text-tertiary mt-2">此门票已过期</p>
-                        </div>
-                        ` : `
-                        <div class="p-6 bg-red-500/5 rounded border border-red-500/20 text-center">
-                            <span class="material-symbols-outlined text-4xl text-red-400">cancel</span>
-                            <p class="text-red-400 mt-2">此门票已${getStatusText(ticket.ticketStatus)}</p>
-                        </div>
-                        `}
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             // 生成二维码
             tickets.forEach(ticket => {
                 if (ticket.ticketStatus === 'ACTIVE') {
+                    const ticketId = ticket.ticketId || ticket.ticketNo || `ticket_${Math.random().toString(36).substr(2, 9)}`;
+                    ticket.ticketId = ticketId; // 确保ticket对象有ticketId
                     setTimeout(() => generateQRCode(ticket), 100);
                 }
             });
@@ -423,28 +896,74 @@
 
         // ==================== 生成二维码 ====================
         function generateQRCode(ticket) {
-            const canvas = document.getElementById(`qrcode-${ticket.ticketId}`);
-            if (!canvas) return;
+            const ticketId = ticket.ticketId || ticket.ticketNo;
+            console.log('生成二维码 - ticketId:', ticketId);
+            console.log('生成二维码 - ticket:', ticket);
 
-            QRCode.toCanvas(canvas, ticket.qrCodeToken || ticket.qrCodeShort || ticket.ticketNo, {
-                width: 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
-                }
-            }, function(error) {
-                if (error) {
-                    console.error('生成二维码失败:', error);
-                    canvas.parentElement.innerHTML = '<p class="text-red-400">二维码生成失败</p>';
-                }
-            });
+            const imgElement = document.getElementById(`qrcode-${ticketId}`);
+            if (!imgElement) {
+                console.error('找不到img元素:', `qrcode-${ticketId}`);
+                return;
+            }
+
+            const qrData = ticket.qrCodeToken || ticket.qrCodeShort || ticket.ticketNo;
+            console.log('二维码数据:', qrData ? qrData.substring(0, 50) + '...' : '无数据');
+
+            if (!qrData) {
+                console.error('没有二维码数据');
+                imgElement.parentElement.innerHTML = '<p class="text-red-400">无二维码数据</p>';
+                return;
+            }
+
+            // 直接使用qrcodejs库生成二维码
+            if (typeof QRCode !== 'undefined') {
+                generateQRCodeFallback(imgElement, qrData);
+            } else {
+                console.error('QRCode库未加载');
+                imgElement.parentElement.innerHTML = '<p class="text-red-400">二维码库未加载</p>';
+            }
+        }
+
+        // 备用二维码生成方法（使用qrcodejs）
+        function generateQRCodeFallback(imgElement, qrData) {
+            try {
+                // 创建一个临时div
+                const tempDiv = document.createElement('div');
+
+                // 使用qrcodejs库生成二维码
+                new QRCode(tempDiv, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+
+                // 获取生成的canvas并转换为img
+                setTimeout(() => {
+                    const canvas = tempDiv.querySelector('canvas');
+                    if (canvas) {
+                        imgElement.src = canvas.toDataURL('image/png');
+                        console.log('二维码生成成功（使用qrcodejs备用方案）');
+                    } else {
+                        const img = tempDiv.querySelector('img');
+                        if (img) {
+                            imgElement.src = img.src;
+                            console.log('二维码生成成功（使用qrcodejs备用方案）');
+                        }
+                    }
+                }, 100);
+            } catch (e) {
+                console.error('备用二维码生成失败:', e);
+                imgElement.parentElement.innerHTML = '<p class="text-red-400">二维码生成失败: ' + e.message + '</p>';
+            }
         }
 
         // ==================== 保存二维码 ====================
         function saveQRCode(ticketNo) {
-            const canvas = document.querySelector(`canvas[id^="qrcode-"]`);
-            if (!canvas) {
+            const img = document.querySelector(`img[id^="qrcode-"]`);
+            if (!img) {
                 alert('二维码未找到');
                 return;
             }
@@ -452,11 +971,11 @@
             try {
                 const link = document.createElement('a');
                 link.download = `门票-${ticketNo}.png`;
-                link.href = canvas.toDataURL('image/png');
+                link.href = img.src;
                 link.click();
             } catch (error) {
                 console.error('保存失败:', error);
-                alert('保存失败，请截图保存');
+                alert('保存失败，请右键图片另存为');
             }
         }
 
@@ -480,23 +999,43 @@
         }
 
         // ==================== 页面初始化 ====================
-        window.addEventListener('load', () => {
-            // 检查URL参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const phone = urlParams.get('phone');
-
-            if (phone) {
-                document.getElementById('phoneInput').value = phone;
-                queryTickets();
+        window.addEventListener('load', async () => {
+            // 检查QRCode库是否加载
+            console.log('QRCode库状态:', typeof QRCode !== 'undefined' ? '已加载' : '未加载');
+            if (typeof QRCode === 'undefined') {
+                console.error('QRCode库未加载，二维码功能将无法使用');
             }
 
-            // 支持回车键搜索
-            document.getElementById('phoneInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    queryTickets();
-                }
-            });
+            // 1. 检查用户是否登录
+            const userInfo = getCurrentUser();
+            console.log('用户信息:', userInfo);
+
+            if (!userInfo || !userInfo.phone) {
+                // 未登录，显示登录提示
+                console.log('用户未登录，显示登录提示');
+                document.getElementById('notLoggedInState').classList.remove('hidden');
+                return;
+            }
+
+            // 2. 已登录，直接加载票券
+            console.log('用户已登录，加载票券:', userInfo.phone);
+            await queryTickets(userInfo.phone);
         });
+
+        // 快速查询（测试用）
+        async function quickQuery() {
+            const phone = document.getElementById('quickPhoneInput').value.trim();
+            if (!phone) {
+                alert('请输入手机号');
+                return;
+            }
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                alert('请输入正确的手机号');
+                return;
+            }
+            document.getElementById('notLoggedInState').classList.add('hidden');
+            await queryTickets(phone);
+        }
     </script>
 </body>
 </html>

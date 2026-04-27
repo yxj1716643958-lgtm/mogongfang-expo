@@ -173,7 +173,9 @@
 
     <script>
         const API_CONFIG = {
-            baseUrl: 'https://101.200.126.62/api/v1',  // 阿里云ECS后端API地址（HTTPS）
+            baseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:3001/api/v1'   // 本地开发
+                : '/api/proxy'  // Vercel生产环境 - 使用代理解决混合内容问题
         };
 
         // 获取URL参数

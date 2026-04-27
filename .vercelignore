@@ -1,0 +1,65 @@
+# Node.js
+node_modules/
+npm-debug.log
+package-lock.json
+
+# 数据库
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# 服务器文件
+server.js
+ticket-server.js
+sqlite-adapter.js
+sqlite-db.js
+
+# 测试文件
+test-*.js
+test-*.html
+create-test-ticket.js
+check_db.py
+
+# 部署脚本
+deploy-*.sh
+deploy-*.bat
+*.sh
+
+# 文档
+README.md
+PROJECT_STRUCTURE.md
+*.md
+
+# 开发配置
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.bak
+*.log
+
+# Worktrees
+.claude/worktrees/
+
+# 其他
+public/
+
+# 不要忽略api目录（Vercel serverless functions）
+!api/
+
